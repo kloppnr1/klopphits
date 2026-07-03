@@ -1,0 +1,55 @@
+# KloppHits 🎮📺
+
+Big screen-software til stuen: se dine **private billeder og videoklip**, start dine **Steam-spil** og spil **online retro-spil** — alt sammen styret **udelukkende med en controller** (10-foot UI, som Steam Big Picture).
+
+Bygget med [Electron](https://www.electronjs.org/) og browserens Gamepad API. Ingen mus eller tastatur nødvendig.
+
+## Funktioner
+
+- **🖼️ Billeder** — gennemse en valgfri mappe (inkl. undermapper) i et flisegitter, åbn i fuld skærm og start diasshow.
+- **🎬 Videoklip** — gennemse videoer med miniaturer, afspil i fuld skærm med pause, spol (±10 sek.), lydstyrke og næste/forrige klip.
+- **🎮 Steam** — scanner automatisk dit installerede Steam-bibliotek (Windows, Linux inkl. Flatpak, macOS) og viser spillene med coverbilleder. Tryk A for at starte spillet via Steam. Y åbner Steam Big Picture.
+- **👾 Retro Spil** — kuraterede online retro-platforme (Internet Arcade, Console Living Room, MS-DOS Games, itch.io) åbnes i fuld skærm. De fleste web-emulatorer understøtter controlleren direkte. **Hold SELECT + START i 1 sekund** for at vende tilbage til KloppHits.
+- **⚙️ Indstillinger** — vælg billed- og videomappe med en controller-venlig mappevælger. Gemmes i din brugerprofil.
+
+## Kom i gang
+
+Kræver [Node.js](https://nodejs.org/) 18+.
+
+```bash
+npm install
+npm start
+```
+
+Appen starter i fuld skærm. Til udvikling kan du starte i vindue:
+
+```bash
+npm run start:windowed
+```
+
+## Styring
+
+| Knap | Funktion |
+|---|---|
+| D-pad / venstre stik | Navigér |
+| **A** | Vælg / Åbn / Pause-Afspil |
+| **B** | Tilbage |
+| **X** | Vælg mappe (i mappevælger) / Forrige klip (i afspiller) |
+| **Y** | Steam Big Picture (i Steam) / Næste klip (i afspiller) |
+| **SELECT + START** (hold 1 sek.) | Luk retro-spil og vend tilbage |
+
+Tastatur virker som reserve under udvikling (piletaster, Enter = A, Esc = B, X/Y).
+
+## Konfiguration
+
+Indstillinger gemmes i `config.json` under Electrons brugerdata-mappe (fx `~/.config/klopphits/config.json` på Linux). Her kan du også redigere listen af retro-sider (`retroSites`) med `name`, `description` og `url`.
+
+## Understøttede formater
+
+- **Billeder:** JPG, PNG, GIF, WebP, AVIF, BMP
+- **Video:** MP4, M4V, WebM, MOV (MKV vises, men afspilning afhænger af codec)
+
+## Tips til HTPC-brug
+
+- Sæt appen til at starte automatisk ved login, så tv'et boot'er direkte ind i KloppHits.
+- Steam-spil startes gennem Steam — brug Steam-overlayet (Guide-knappen) til at lukke spil igen.

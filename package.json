@@ -1,0 +1,16 @@
+{
+  "name": "klopphits",
+  "productName": "KloppHits",
+  "version": "0.1.0",
+  "description": "Big screen software til billeder, videoklip, Steam-spil og online retro-spil - styret udelukkende med controller",
+  "main": "main.js",
+  "author": "kloppnr1",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "start:windowed": "electron . --windowed"
+  },
+  "devDependencies": {
+    "electron": "^31.3.0"
+  }
+}
