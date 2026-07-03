@@ -1,0 +1,791 @@
+<title>KloppHits – Koncept-UI</title>
+<style>
+  /* KloppHits koncept-UI — kun stil og primaer navigation.
+     Skandinavisk identitet: koelig grafit, haarfine kanter, nordisk isblaa
+     accent, rene stregikoner, luft og rolige overgange.
+     Bevidst kun moerkt tema: det er et TV-interface.
+     1rem skalerer med skaermhoejden, saa alt ser ens ud paa 1080p og 4K. */
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #101216;
+    --bg-soft: #191c22;
+    --panel: #20242b;
+    --line: #2c313a;
+    --accent: #8fbfd1;
+    --accent-soft: #bcdde9;
+    --accent-glow: rgba(143, 191, 209, 0.42);
+    --text: #eef0f3;
+    --text-dim: #9aa3ae;
+    --radius: 1.1rem;
+    --focus-width: 0.26rem;
+    --safe-x: 5vw;
+    --safe-y: 2.5vh;
+    color-scheme: dark;
+  }
+
+  html { font-size: calc(100vh / 67.5); }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", "Helvetica Neue", "Noto Sans", Ubuntu, sans-serif;
+    user-select: none;
+  }
+
+  /* ---- Levende baggrund med let parallakse ---- */
+
+  #ambient { position: fixed; inset: -3vw; z-index: 0; opacity: 0; transition: opacity 1s ease; pointer-events: none; }
+  body.on-home #ambient { opacity: 1; }
+  #ambient .amb-layer {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+    filter: brightness(0.55) saturate(0.55);
+    opacity: 0;
+    transition: opacity 2.5s ease, transform 1.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  #ambient .amb-layer.visible { opacity: 1; }
+  #ambient::after {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(rgba(16, 18, 22, 0.25), rgba(16, 18, 22, 0.66) 78%, var(--bg)),
+      radial-gradient(90vw 80vh at 50% 30%, transparent 0%, rgba(16, 18, 22, 0.5) 100%);
+  }
+
+  #app { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100vh; }
+
+  .icon-wrap { display: inline-flex; flex: 0 0 auto; }
+
+  /* ---- Topbar ---- */
+
+  #topbar {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: var(--safe-y) var(--safe-x) 0;
+    flex: 0 0 auto;
+  }
+  #logo { font-size: 1.9rem; font-weight: 700; letter-spacing: 0.05em; }
+  #logo span { color: var(--accent); }
+  #clock { font-size: 1.8rem; font-weight: 300; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+  /* ---- Skaerme ---- */
+
+  #screens { flex: 1 1 auto; position: relative; overflow: hidden; }
+  .screen {
+    position: absolute; inset: 0;
+    display: none; flex-direction: column;
+    padding: 0 var(--safe-x) 1rem;
+    overflow: hidden;
+  }
+  .screen.active { display: flex; animation: screenIn 0.3s ease both; }
+  @keyframes screenIn {
+    from { opacity: 0; transform: translateY(0.8rem); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* ---- Hjem: hilsen + navigations-rail ---- */
+
+  #screen-home { justify-content: flex-end; gap: 2.6rem; padding-bottom: 2rem; }
+
+  .greeting { display: flex; flex-direction: column; gap: 0.5rem; }
+  .greeting .hello {
+    font-size: 4.6rem;
+    font-weight: 200;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+    text-wrap: balance;
+  }
+  .greeting .date {
+    font-size: 1.45rem;
+    font-weight: 400;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+  }
+
+  .rail { display: flex; gap: 1.3rem; align-items: stretch; }
+
+  .card {
+    position: relative;
+    width: 13rem;
+    height: 16rem;
+    border-radius: var(--radius);
+    background: rgba(32, 36, 43, 0.72);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 1.6rem 1.7rem;
+    overflow: hidden;
+    outline: var(--focus-width) solid transparent;
+    outline-offset: -1px;
+    transition:
+      width 0.38s cubic-bezier(0.22, 0.61, 0.36, 1),
+      outline-color 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.25s ease,
+      background-color 0.25s ease;
+  }
+  .card.focused {
+    width: 27rem;
+    background: rgba(35, 40, 48, 0.88);
+    outline-color: var(--accent);
+    border-color: transparent;
+    box-shadow: 0 0 0 var(--focus-width) var(--accent-glow), 0 1.4rem 3.5rem rgba(0, 0, 0, 0.55);
+  }
+
+  .card .icon-wrap { position: absolute; top: 1.6rem; left: 1.7rem; }
+  .card .icon-wrap svg {
+    width: 3rem; height: 3rem;
+    color: var(--text-dim);
+    transition: color 0.25s ease;
+  }
+  .card.focused .icon-wrap svg { color: var(--accent); }
+
+  .card .label {
+    font-size: 1.5rem;
+    font-weight: 650;
+    white-space: nowrap;
+  }
+  .card .desc {
+    width: 21rem;
+    font-size: 1.15rem;
+    line-height: 1.45;
+    color: var(--text-dim);
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.38s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.3s ease 0.12s, margin-top 0.38s ease;
+  }
+  .card.focused .desc { max-height: 6rem; opacity: 1; margin-top: 0.5rem; }
+
+  .card .open-chip {
+    position: absolute;
+    top: 1.6rem; right: 1.6rem;
+    display: flex; align-items: center; gap: 0.55rem;
+    font-size: 1rem; font-weight: 600; color: var(--text-dim);
+    opacity: 0;
+    transition: opacity 0.3s ease 0.15s;
+  }
+  .card.focused .open-chip { opacity: 1; }
+
+  /* ---- Sektionssider ---- */
+
+  .screen-title { font-size: 2.5rem; font-weight: 650; margin: 1.6rem 0 0.3rem; text-wrap: balance; }
+  .screen-subtitle { font-size: 1.3rem; font-weight: 400; color: var(--text-dim); margin-bottom: 0.9rem; }
+  .scroll-area { flex: 1 1 auto; overflow-y: auto; scrollbar-width: none; padding: 1.3rem 0.5rem 3rem; }
+  .scroll-area::-webkit-scrollbar { display: none; }
+
+  .grid { display: grid; gap: 2rem; }
+
+  .tile {
+    position: relative;
+    border-radius: var(--radius);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, outline-color 0.15s ease, border-color 0.15s ease;
+    outline: var(--focus-width) solid transparent;
+    outline-offset: -1px;
+  }
+  .tile.focused {
+    transform: scale(1.05);
+    outline-color: var(--accent);
+    border-color: transparent;
+    box-shadow: 0 0 0 var(--focus-width) var(--accent-glow), 0 1.2rem 3rem rgba(0, 0, 0, 0.55);
+    z-index: 2;
+  }
+
+  .tile.media-tile { aspect-ratio: 16 / 10; }
+  .tile.media-tile .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 3.6rem; }
+  .tile .caption {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 1.8rem 0.9rem 0.65rem;
+    font-size: 1.15rem; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+  }
+  .tile .duration {
+    position: absolute; top: 0.6rem; right: 0.6rem;
+    background: rgba(16, 18, 22, 0.85); border: 1px solid var(--line);
+    padding: 0.1rem 0.6rem; border-radius: 0.5rem;
+    font-size: 0.95rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+
+  .tile.steam-tile { aspect-ratio: 2 / 3; background: var(--bg-soft); }
+  .tile.steam-tile .fallback {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1rem; padding: 1.2rem; text-align: center;
+  }
+  .tile.steam-tile .big-letter { font-size: 4rem; font-weight: 700; color: var(--accent); }
+  .tile.steam-tile .name { font-size: 1.25rem; font-weight: 600; color: var(--text-dim); }
+
+  .tile.retro-tile { padding: 2rem 2rem 1.8rem; display: flex; flex-direction: column; gap: 0.8rem; min-height: 11rem; }
+  .tile.retro-tile .name { font-size: 1.65rem; font-weight: 650; display: flex; align-items: center; gap: 1rem; }
+  .tile.retro-tile .name svg { width: 1.7rem; height: 1.7rem; color: var(--accent); }
+  .tile.retro-tile .desc { font-size: 1.25rem; color: var(--text-dim); line-height: 1.45; }
+
+  .rows { display: flex; flex-direction: column; gap: 1rem; max-width: 75rem; }
+  .row-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;
+    padding: 1.5rem 2rem;
+    border-radius: var(--radius);
+    background: var(--panel); border: 1px solid var(--line);
+    outline: var(--focus-width) solid transparent; outline-offset: -1px;
+    transition: transform 0.12s ease, outline-color 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+  }
+  .row-item.focused {
+    transform: scale(1.012);
+    outline-color: var(--accent); border-color: transparent;
+    box-shadow: 0 0 0 var(--focus-width) var(--accent-glow);
+  }
+  .row-item .row-label { font-size: 1.5rem; font-weight: 650; display: flex; align-items: center; gap: 1rem; }
+  .row-item .row-label svg { width: 1.7rem; height: 1.7rem; color: var(--accent); }
+  .row-item .row-value { font-size: 1.25rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---- Knap-hints ---- */
+
+  #hints {
+    flex: 0 0 auto;
+    display: flex; gap: 2.4rem; justify-content: center;
+    padding: 1rem 0 var(--safe-y);
+    font-size: 1.25rem; color: var(--text-dim);
+  }
+  #hints .hint { display: flex; align-items: center; gap: 0.7rem; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 2.2rem; height: 2.2rem; padding: 0 0.65rem;
+    border-radius: 999px;
+    background: rgba(25, 28, 34, 0.85); border: 1px solid var(--line);
+    font-weight: 700; font-size: 1rem; color: var(--text);
+  }
+  .btn.btn-a { border-color: #5d9e70; color: #9ed4ac; }
+  .btn.btn-b { border-color: #b56a5f; color: #e5a89e; }
+
+  /* ---- Toast ---- */
+
+  #toast {
+    position: fixed; top: calc(var(--safe-y) + 0.8rem); left: 50%; transform: translateX(-50%);
+    background: rgba(25, 28, 34, 0.96); border: 1px solid var(--accent);
+    padding: 0.9rem 2.2rem; border-radius: 999px;
+    font-size: 1.3rem; font-weight: 600; z-index: 60;
+    transition: opacity 0.25s ease;
+    max-width: 80vw; text-align: center;
+  }
+  .hidden { opacity: 0; pointer-events: none; }
+
+  /* ---- Intro ---- */
+
+  #intro {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(10, 12, 15, 0.86);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #intro.gone { display: none; }
+  #intro .intro-card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 1.4rem; padding: 2.4rem 2.8rem; max-width: 42rem;
+    display: flex; flex-direction: column; gap: 1rem;
+    box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.6);
+  }
+  #intro h1 { font-size: 1.9rem; font-weight: 700; letter-spacing: 0.05em; }
+  #intro h1 span { color: var(--accent); }
+  #intro p { font-size: 1.2rem; color: var(--text-dim); line-height: 1.55; max-width: 55ch; }
+  #intro .go { font-size: 1.25rem; font-weight: 700; color: #9ed4ac; margin-top: 0.4rem; }
+  kbd {
+    background: var(--bg-soft); border: 1px solid var(--line); border-radius: 0.45rem;
+    padding: 0.1rem 0.55rem; font-family: inherit; font-size: 1rem; font-weight: 700;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tile, .row-item, .card, .card .desc, .card .icon-wrap svg,
+    #ambient, #ambient .amb-layer { transition: none; }
+    .screen.active { animation: none; }
+  }
+</style>
+
+<div id="ambient"></div>
+<div id="app">
+  <header id="topbar">
+    <div id="logo">klopp<span>hits</span></div>
+    <div id="clock"></div>
+  </header>
+  <main id="screens"></main>
+  <footer id="hints"></footer>
+  <div id="toast" class="hidden"></div>
+</div>
+
+<div id="intro">
+  <div class="intro-card">
+    <h1>klopp<span>hits</span> · koncept-UI</h1>
+    <p>Kun stil og primær navigation — ingen funktioner. Brug controller (D-pad/stik, A, B) eller tastatur: <kbd>piletaster</kbd>, <kbd>Enter</kbd> = A, <kbd>Esc</kbd> = B.</p>
+    <div class="go">Tryk A eller Enter for at starte</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ============================================================================
+// Ikoner (rene stregikoner, farves med currentColor)
+// ============================================================================
+
+var STROKE = 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"';
+
+var ICONS = {
+  photos: '<svg viewBox="0 0 24 24" ' + STROKE + '><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M3 17l5-4 4 3 4.5-4.5L21 16"/></svg>',
+  videos: '<svg viewBox="0 0 24 24" ' + STROKE + '><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 9.5h3.5M3 14.5h3.5M17.5 9.5H21M17.5 14.5H21M6.5 5v14M17.5 5v14"/><path d="M10.6 9.8v4.4l3.8-2.2z" fill="currentColor" stroke="none"/></svg>',
+  steam: '<svg viewBox="0 0 24 24" ' + STROKE + '><path d="M6.8 7.5h10.4a4.8 4.8 0 0 1 4.77 5.3c-.2 1.9-1.7 3.7-3.67 3.7-1.11 0-2.16-.53-2.83-1.42L14.3 13.6H9.7l-1.17 1.48c-.67.89-1.72 1.42-2.83 1.42-1.97 0-3.47-1.8-3.67-3.7A4.8 4.8 0 0 1 6.8 7.5z"/><path d="M8.2 10.4v3M6.7 11.9h3"/><circle cx="15.3" cy="11" r="0.9" fill="currentColor" stroke="none"/><circle cx="17.6" cy="12.9" r="0.9" fill="currentColor" stroke="none"/></svg>',
+  retro: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 4h2v2H5zM17 4h2v2h-2zM7 6h2v2H7zM15 6h2v2h-2zM5 8h14v2H5zM3 10h4v2H3zM9 10h6v2H9zM17 10h4v2h-4zM1 12h22v2H1zM1 14h2v2H1zM5 14h14v2H5zM21 14h2v2h-2zM1 16h2v2H1zM5 16h2v2H5zM17 16h2v2h-2zM21 16h2v2h-2zM7 18h4v2H7zM13 18h4v2h-4z"/></svg>',
+  settings: '<svg viewBox="0 0 24 24" ' + STROKE + '><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .33 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.6 1.6 0 0 0 15 19.4a1.6 1.6 0 0 0-1 1.47V21a2 2 0 1 1-4 0v-.09A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.77.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.6 1.6 0 0 0 4.6 15a1.6 1.6 0 0 0-1.47-1H3a2 2 0 1 1 0-4h.09A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.33-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.6 1.6 0 0 0 9 4.6a1.6 1.6 0 0 0 1-1.47V3a2 2 0 1 1 4 0v.09a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.6 1.6 0 0 0 19.4 9c.26.6.86 1 1.51 1H21a2 2 0 1 1 0 4h-.09c-.65 0-1.25.4-1.51 1z"/></svg>',
+  power: '<svg viewBox="0 0 24 24" ' + STROKE + '><path d="M12 3v8"/><path d="M6.3 6.5a8 8 0 1 0 11.4 0"/></svg>'
+};
+
+// ============================================================================
+// Hjaelpere
+// ============================================================================
+
+function el(tag, className, text) {
+  var node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function icon(name) {
+  var wrap = el('span', 'icon-wrap');
+  wrap.innerHTML = ICONS[name];
+  return wrap;
+}
+
+var toastTimer = null;
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { t.classList.add('hidden'); }, 2400);
+}
+
+function setHints(hints) {
+  var bar = document.getElementById('hints');
+  bar.innerHTML = '';
+  hints.forEach(function (h) {
+    var wrap = el('div', 'hint');
+    wrap.appendChild(el('span', 'btn btn-' + h[0].toLowerCase(), h[0]));
+    wrap.appendChild(el('span', null, h[1]));
+    bar.appendChild(wrap);
+  });
+}
+
+function scene(hue1, hue2, emoji) {
+  return {
+    bg: 'linear-gradient(150deg, hsl(' + hue1 + ' 28% 34%) 0%, hsl(' + hue2 + ' 32% 14%) 85%)',
+    emoji: emoji
+  };
+}
+
+// ============================================================================
+// Demo-indhold (kun til at vise stilen)
+// ============================================================================
+
+var PHOTOS = [
+  ['IMG_2031.jpg', scene(24, 350, '🌅')], ['IMG_2044.jpg', scene(200, 230, '🏖️')],
+  ['Foedselsdag.jpg', scene(330, 280, '🎂')], ['Sommerhus.jpg', scene(95, 140, '🏡')],
+  ['IMG_2107.jpg', scene(210, 250, '⛰️')], ['Jul_2025.jpg', scene(0, 350, '🎄')],
+  ['Hunden.jpg', scene(35, 20, '🐕')], ['IMG_2199.jpg', scene(260, 220, '🎆')],
+  ['Ferie_Italien.jpg', scene(45, 15, '🍕')], ['IMG_2230.jpg', scene(180, 210, '⛵')]
+].map(function (p) { return { name: p[0], scene: p[1] }; });
+
+var VIDEOS = [
+  ['Sommerferie_2025.mp4', '12:34', scene(200, 45, '🏖️')],
+  ['Foedselsdagssang.mp4', '1:36', scene(330, 300, '🎂')],
+  ['Hunden_i_haven.mp4', '2:23', scene(100, 60, '🐕')],
+  ['Nytaar.mp4', '5:12', scene(260, 230, '🎆')],
+  ['Skitur_GoPro.mp4', '8:41', scene(205, 190, '⛷️')],
+  ['Sejltur.mp4', '7:08', scene(190, 215, '⛵')],
+  ['Koncert.mp4', '3:07', scene(300, 270, '🎸')],
+  ['Julemorgen.mp4', '4:25', scene(0, 350, '🎄')]
+].map(function (v) { return { name: v[0], dur: v[1], scene: v[2] }; });
+
+var STEAM = ['Hollow Knight', 'Rocket League', 'Stardew Valley', 'Portal 2', 'Celeste',
+  'Hades', 'DOOM Eternal', 'Forza Horizon 5', 'Cuphead', 'It Takes Two'];
+
+var RETRO = [
+  { name: 'Internet Arcade', desc: 'Klassiske arkadespil i browseren' },
+  { name: 'Console Living Room', desc: 'Retro konsolspil fra 70’erne og 80’erne' },
+  { name: 'MS-DOS Games', desc: 'Tusindvis af DOS-spil' },
+  { name: 'itch.io', desc: 'Gratis indie- og retrospil' }
+];
+
+// ============================================================================
+// Levende baggrund med parallakse
+// ============================================================================
+
+var Ambient = (function () {
+  var root = document.getElementById('ambient');
+  var layers = [el('div', 'amb-layer'), el('div', 'amb-layer')];
+  layers.forEach(function (l) { root.appendChild(l); });
+  var active = 0;
+
+  function next() {
+    var pick = PHOTOS[Math.floor(Math.random() * PHOTOS.length)];
+    active = 1 - active;
+    layers[active].style.background = pick.scene.bg;
+    layers[active].classList.add('visible');
+    layers[1 - active].classList.remove('visible');
+  }
+  function parallax(index, count) {
+    var shift = (index - (count - 1) / 2) * 0.5; // -1..1 vw ca.
+    layers.forEach(function (l) {
+      l.style.transform = 'translateX(' + (-shift) + 'vw) scale(1.05)';
+    });
+  }
+  next();
+  setInterval(next, 14000);
+  return { parallax: parallax };
+})();
+
+// ============================================================================
+// Fokus-gitter
+// ============================================================================
+
+function Grid(cols) {
+  this.cols = cols;
+  this.items = [];
+  this.index = 0;
+}
+Grid.prototype.setItems = function (elements) {
+  this.items = elements;
+  this.index = Math.min(this.index, Math.max(0, elements.length - 1));
+  this.applyFocus(false);
+};
+Grid.prototype.applyFocus = function (scroll) {
+  var idx = this.index;
+  this.items.forEach(function (item, i) { item.classList.toggle('focused', i === idx); });
+  var cur = this.items[idx];
+  if (cur && scroll !== false) cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+Grid.prototype.move = function (dir) {
+  if (!this.items.length) return false;
+  var i = this.index;
+  if (dir === 'left') i -= 1;
+  else if (dir === 'right') i += 1;
+  else if (dir === 'up') i -= this.cols;
+  else if (dir === 'down') i += this.cols;
+  else return false;
+  if (dir === 'down' && i >= this.items.length) {
+    var lastRowStart = Math.floor((this.items.length - 1) / this.cols) * this.cols;
+    if (this.index < lastRowStart) i = this.items.length - 1; else return false;
+  }
+  if (i < 0 || i >= this.items.length || i === this.index) return false;
+  this.index = i;
+  this.applyFocus();
+  return true;
+};
+Object.defineProperty(Grid.prototype, 'current', {
+  get: function () { return this.items[this.index] || null; }
+});
+
+// ============================================================================
+// Skaerm-stak
+// ============================================================================
+
+var Screens = {
+  stack: [],
+  push: function (screen, params) {
+    var prev = this.top();
+    if (prev) prev.el.classList.remove('active');
+    this.stack.push(screen);
+    screen.el.classList.add('active');
+    if (screen.enter) screen.enter(params);
+    this.refresh();
+  },
+  pop: function () {
+    var screen = this.stack.pop();
+    if (screen) screen.el.classList.remove('active');
+    var top = this.top();
+    if (top) top.el.classList.add('active');
+    this.refresh();
+  },
+  top: function () { return this.stack[this.stack.length - 1] || null; },
+  refresh: function () {
+    var top = this.top();
+    setHints(top && top.hints ? top.hints() : []);
+    document.body.classList.toggle('on-home', top === homeScreen);
+  },
+  handle: function (action) {
+    var top = this.top();
+    if (top && top.onInput) top.onInput(action);
+  }
+};
+
+function makeScreen(id, build) {
+  var container = document.getElementById('screens');
+  var root = el('section', 'screen');
+  root.id = 'screen-' + id;
+  container.appendChild(root);
+  var screen = { el: root };
+  build(screen, root);
+  return screen;
+}
+
+// ============================================================================
+// Hjem: hilsen + navigations-rail
+// ============================================================================
+
+var MENU = [
+  { id: 'photos', icon: 'photos', label: 'Billeder', desc: 'Dine private billeder i fuld skærm — med diasshow.' },
+  { id: 'videos', icon: 'videos', label: 'Videoklip', desc: 'Familiens videoklip, klar til afspilning.' },
+  { id: 'steam', icon: 'steam', label: 'Steam', desc: 'Dine installerede spil — tryk A og spil.' },
+  { id: 'retro', icon: 'retro', label: 'Retro spil', desc: 'Online klassikere fra arkaden og konsollen.' },
+  { id: 'settings', icon: 'settings', label: 'Indstillinger', desc: 'Mapper, kilder og program.' }
+];
+
+function greetingText() {
+  var h = new Date().getHours();
+  if (h >= 5 && h < 10) return 'Godmorgen.';
+  if (h >= 10 && h < 18) return 'Goddag.';
+  return 'Godaften.';
+}
+
+function dateText() {
+  var s = new Date().toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+var homeScreen = makeScreen('home', function (screen, root) {
+  var greet = el('div', 'greeting');
+  greet.appendChild(el('div', 'hello', greetingText()));
+  greet.appendChild(el('div', 'date', dateText()));
+  root.appendChild(greet);
+
+  var rail = el('div', 'rail');
+  root.appendChild(rail);
+
+  var focus = new Grid(MENU.length);
+  var cards = MENU.map(function (m) {
+    var card = el('div', 'card');
+    card.dataset.target = m.id;
+    card.appendChild(icon(m.icon));
+    var chip = el('div', 'open-chip');
+    chip.appendChild(el('span', 'btn btn-a', 'A'));
+    chip.appendChild(el('span', null, 'Åbn'));
+    card.appendChild(chip);
+    card.appendChild(el('div', 'label', m.label));
+    card.appendChild(el('div', 'desc', m.desc));
+    rail.appendChild(card);
+    return card;
+  });
+  focus.setItems(cards);
+
+  function applyParallax() { Ambient.parallax(focus.index, MENU.length); }
+  applyParallax();
+
+  screen.enter = function () { focus.applyFocus(false); applyParallax(); };
+  screen.hints = function () { return [['A', 'Åbn'], ['✚', 'Navigér']]; };
+  screen.onInput = function (action) {
+    if (action === 'left' || action === 'up') { focus.move('left'); applyParallax(); }
+    else if (action === 'right' || action === 'down') { focus.move('right'); applyParallax(); }
+    else if (action === 'a') {
+      var target = focus.current && focus.current.dataset.target;
+      if (target === 'photos') Screens.push(photosScreen);
+      else if (target === 'videos') Screens.push(videosScreen);
+      else if (target === 'steam') Screens.push(steamScreen);
+      else if (target === 'retro') Screens.push(retroScreen);
+      else if (target === 'settings') Screens.push(settingsScreen);
+    }
+  };
+});
+
+// ============================================================================
+// Sektionssider (viser stil + grid-navigation, ingen funktion)
+// ============================================================================
+
+function conceptToast() {
+  toast('Koncept — kun stil og navigation');
+}
+
+function makeSection(id, title, subtitle, cols, buildTiles) {
+  return makeScreen(id, function (screen, root) {
+    root.appendChild(el('h2', 'screen-title', title));
+    root.appendChild(el('p', 'screen-subtitle', subtitle));
+    var area = el('div', 'scroll-area');
+    root.appendChild(area);
+    var grid = el('div', cols === 1 ? 'rows' : 'grid');
+    if (cols > 1) grid.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+    area.appendChild(grid);
+
+    var focus = new Grid(cols);
+    var tiles = buildTiles(grid);
+    focus.setItems(tiles);
+
+    screen.enter = function () { focus.index = 0; focus.applyFocus(false); };
+    screen.hints = function () { return [['A', 'Åbn'], ['B', 'Hjem'], ['✚', 'Navigér']]; };
+    screen.onInput = function (action) {
+      if (['up', 'down', 'left', 'right'].indexOf(action) !== -1) focus.move(action);
+      else if (action === 'a') conceptToast();
+      else if (action === 'b') Screens.pop();
+    };
+  });
+}
+
+var photosScreen = makeSection('photos', 'Billeder', PHOTOS.length + ' filer · /home/klopp/Billeder', 5, function (grid) {
+  return PHOTOS.map(function (item) {
+    var tile = el('div', 'tile media-tile');
+    var ph = el('div', 'ph', item.scene.emoji);
+    ph.style.background = item.scene.bg;
+    tile.appendChild(ph);
+    tile.appendChild(el('div', 'caption', item.name));
+    grid.appendChild(tile);
+    return tile;
+  });
+});
+
+var videosScreen = makeSection('videos', 'Videoklip', VIDEOS.length + ' filer · /home/klopp/Videoer', 4, function (grid) {
+  return VIDEOS.map(function (item) {
+    var tile = el('div', 'tile media-tile');
+    var ph = el('div', 'ph', item.scene.emoji);
+    ph.style.background = item.scene.bg;
+    tile.appendChild(ph);
+    tile.appendChild(el('div', 'duration', item.dur));
+    tile.appendChild(el('div', 'caption', item.name));
+    grid.appendChild(tile);
+    return tile;
+  });
+});
+
+var steamScreen = makeSection('steam', 'Steam', STEAM.length + ' installerede spil', 5, function (grid) {
+  return STEAM.map(function (name) {
+    var tile = el('div', 'tile steam-tile');
+    var fb = el('div', 'fallback');
+    fb.appendChild(el('div', 'big-letter', name.charAt(0)));
+    fb.appendChild(el('div', 'name', name));
+    tile.appendChild(fb);
+    grid.appendChild(tile);
+    return tile;
+  });
+});
+
+var retroScreen = makeSection('retro', 'Retro spil', 'Online retro-spil i fuld skærm', 2, function (grid) {
+  return RETRO.map(function (site) {
+    var tile = el('div', 'tile retro-tile');
+    var name = el('div', 'name');
+    name.appendChild(icon('retro'));
+    name.appendChild(el('span', null, site.name));
+    tile.appendChild(name);
+    tile.appendChild(el('div', 'desc', site.desc));
+    grid.appendChild(tile);
+    return tile;
+  });
+});
+
+var settingsScreen = makeSection('settings', 'Indstillinger', 'Mapper, kilder og program', 1, function (rows) {
+  var defs = [
+    { icon: 'photos', label: 'Billedmappe', value: '/home/klopp/Billeder' },
+    { icon: 'videos', label: 'Videomappe', value: '/home/klopp/Videoer' },
+    { icon: 'power', label: 'Afslut KloppHits', value: '' }
+  ];
+  return defs.map(function (d) {
+    var row = el('div', 'row-item');
+    var lab = el('div', 'row-label');
+    lab.appendChild(icon(d.icon));
+    lab.appendChild(el('span', null, d.label));
+    row.appendChild(lab);
+    row.appendChild(el('div', 'row-value', d.value));
+    rows.appendChild(row);
+    return row;
+  });
+});
+
+// ============================================================================
+// Input: Gamepad API + tastatur
+// ============================================================================
+
+var Input = (function () {
+  var listeners = [];
+  var REPEAT_DELAY = 420, REPEAT_RATE = 130, STICK_THRESHOLD = 0.55;
+  var DIRECTIONAL = { up: 1, down: 1, left: 1, right: 1 };
+  var BUTTON_MAP = { 0: 'a', 1: 'b', 12: 'up', 13: 'down', 14: 'left', 15: 'right' };
+  var held = {};
+
+  function emit(action) { listeners.forEach(function (fn) { fn(action); }); }
+
+  function activeActions() {
+    var actions = {};
+    var pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (var p = 0; p < pads.length; p++) {
+      var pad = pads[p];
+      if (!pad) continue;
+      for (var i = 0; i < pad.buttons.length; i++) {
+        if (pad.buttons[i].pressed && BUTTON_MAP[i]) actions[BUTTON_MAP[i]] = 1;
+      }
+      if (pad.axes.length >= 2) {
+        if (pad.axes[0] < -STICK_THRESHOLD) actions.left = 1;
+        if (pad.axes[0] > STICK_THRESHOLD) actions.right = 1;
+        if (pad.axes[1] < -STICK_THRESHOLD) actions.up = 1;
+        if (pad.axes[1] > STICK_THRESHOLD) actions.down = 1;
+      }
+    }
+    return actions;
+  }
+
+  function tick() {
+    var now = performance.now();
+    var actions = activeActions();
+    Object.keys(held).forEach(function (a) { if (!actions[a]) delete held[a]; });
+    Object.keys(actions).forEach(function (action) {
+      var h = held[action];
+      if (!h) {
+        held[action] = { since: now, lastRepeat: now };
+        emit(action);
+      } else if (DIRECTIONAL[action] && now - h.since >= REPEAT_DELAY && now - h.lastRepeat >= REPEAT_RATE) {
+        h.lastRepeat = now;
+        emit(action);
+      }
+    });
+    requestAnimationFrame(tick);
+  }
+
+  var KEY_MAP = {
+    ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+    Enter: 'a', Escape: 'b', Backspace: 'b'
+  };
+  window.addEventListener('keydown', function (ev) {
+    var action = KEY_MAP[ev.key];
+    if (action) { ev.preventDefault(); emit(action); }
+  });
+
+  requestAnimationFrame(tick);
+  return { on: function (fn) { listeners.push(fn); } };
+})();
+
+// ============================================================================
+// Ur + opstart
+// ============================================================================
+
+function updateClock() {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+}
+updateClock();
+setInterval(updateClock, 15000);
+
+var introOpen = true;
+Input.on(function (action) {
+  if (introOpen) {
+    if (action === 'a' || action === 'b') {
+      introOpen = false;
+      document.getElementById('intro').classList.add('gone');
+    }
+    return;
+  }
+  Screens.handle(action);
+});
+
+Screens.push(homeScreen);
+</script>
