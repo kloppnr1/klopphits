@@ -49,6 +49,13 @@ Indstillinger gemmes i `config.json` under Electrons brugerdata-mappe (fx `~/.co
 - **Billeder:** JPG, PNG, GIF, WebP, AVIF, BMP
 - **Video:** MP4, M4V, WebM, MOV (MKV vises, men afspilning afhænger af codec)
 
+## Optimeret til 55–75" TV
+
+- Hele UI'et skalerer med skærmhøjden (`rem` bundet til `vh`), så det ser ens ud på 1080p og 4K TV.
+- Tekst- og flisestørrelser er valgt til læsbarhed på 2–3 meters sofaafstand.
+- Overscan-sikre marginer (5 % vandret, 2,5 % lodret), så intet beskæres på TV'er med overscan. Slå evt. "Just Scan" / "Ren scanning" til i TV'ets billedindstillinger for skarpest resultat.
+- Høj kontrast på sekundær tekst og tydelig blå fokusring, så markeringen altid kan ses på afstand.
+
 ## Tips til HTPC-brug
 
 - Sæt appen til at starte automatisk ved login, så tv'et boot'er direkte ind i KloppHits.

@@ -287,7 +287,7 @@ const photosScreen = makeGalleryScreen({
   id: 'photos',
   title: '🖼️ Billeder',
   kind: 'photos',
-  cols: 6,
+  cols: 5,
   emptyMsg: 'Der er ikke valgt en billedmappe endnu.',
   makeTile(item) {
     const tile = el('div', 'tile media-tile');
@@ -508,7 +508,7 @@ const steamScreen = makeScreen('steam', (screen, root) => {
   const area = el('div', 'scroll-area');
   root.appendChild(area);
 
-  const COLS = 6;
+  const COLS = 5;
   const focus = new Grid(COLS);
   let games = [];
 
