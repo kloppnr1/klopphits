@@ -32,7 +32,10 @@
     color-scheme: dark;
   }
 
-  html { font-size: calc(100vh / 67.5); }
+  html {
+    font-size: min(calc(100vh / 67.5), calc(100vw / 52));
+    font-size: min(calc(100dvh / 67.5), calc(100vw / 52));
+  }
 
   html, body {
     height: 100%;
@@ -63,7 +66,7 @@
       radial-gradient(90vw 80vh at 50% 30%, transparent 0%, rgba(16, 18, 22, 0.5) 100%);
   }
 
-  #app { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100vh; }
+  #app { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
 
   .icon-wrap { display: inline-flex; flex: 0 0 auto; }
 
@@ -112,7 +115,13 @@
     letter-spacing: 0.02em;
   }
 
-  .rail { display: flex; gap: 1.3rem; align-items: stretch; }
+  .rail {
+    display: flex; gap: 1.3rem; align-items: stretch;
+    overflow-x: auto; scrollbar-width: none;
+    padding: 0.5rem 0.4rem;
+  }
+  .rail::-webkit-scrollbar { display: none; }
+  .rail .card { flex: 0 0 auto; }
 
   .card {
     position: relative;
@@ -308,6 +317,31 @@
     padding: 0.1rem 0.55rem; font-family: inherit; font-size: 1rem; font-weight: 700;
   }
 
+  /* ---- Touch: tilbage-knap ---- */
+
+  .back-pill {
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    align-self: flex-start;
+    margin-top: 1.2rem;
+    padding: 0.5rem 1.3rem;
+    border-radius: 999px;
+    background: rgba(25, 28, 34, 0.85);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    font-size: 1.15rem; font-weight: 600;
+    cursor: pointer;
+  }
+  .back-pill:active { outline: var(--focus-width) solid var(--accent); color: var(--text); }
+
+  /* ---- Mobil/portraet: forhaandsvisning af TV-konceptet ---- */
+
+  @media (orientation: portrait) {
+    .grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .greeting .hello { font-size: 3.4rem; }
+    #hints { display: none; }
+    #screen-home { padding-bottom: 1.4rem; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .tile, .row-item, .card, .card .desc, .card .icon-wrap svg,
     #ambient, #ambient .amb-layer { transition: none; }
@@ -329,8 +363,8 @@
 <div id="intro">
   <div class="intro-card">
     <h1>klopp<span>hits</span> · koncept-UI</h1>
-    <p>Kun stil og primær navigation — ingen funktioner. Brug controller (D-pad/stik, A, B) eller tastatur: <kbd>piletaster</kbd>, <kbd>Enter</kbd> = A, <kbd>Esc</kbd> = B.</p>
-    <div class="go">Tryk A eller Enter for at starte</div>
+    <p>Kun stil og primær navigation — ingen funktioner. Controller: D-pad/stik, A = åbn, B = tilbage. Tastatur: <kbd>piletaster</kbd>, <kbd>Enter</kbd>, <kbd>Esc</kbd>. Touch: tryk på et kort for at vælge det, tryk igen for at åbne — og brug ‹ Hjem for at gå tilbage.</p>
+    <div class="go">Tryk hvor som helst for at starte</div>
   </div>
 </div>
 
@@ -475,7 +509,7 @@ Grid.prototype.applyFocus = function (scroll) {
   var idx = this.index;
   this.items.forEach(function (item, i) { item.classList.toggle('focused', i === idx); });
   var cur = this.items[idx];
-  if (cur && scroll !== false) cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (cur && scroll !== false) cur.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
 };
 Grid.prototype.move = function (dir) {
   if (!this.items.length) return false;
@@ -497,6 +531,22 @@ Grid.prototype.move = function (dir) {
 Object.defineProperty(Grid.prototype, 'current', {
   get: function () { return this.items[this.index] || null; }
 });
+
+// Touch: foerste tryk fokuserer, andet tryk aabner
+function tapToFocus(focus, element, activate, onFocus) {
+  element.addEventListener('click', function () {
+    if (focus.current === element) {
+      activate();
+    } else {
+      var i = focus.items.indexOf(element);
+      if (i !== -1) {
+        focus.index = i;
+        focus.applyFocus();
+        if (onFocus) onFocus();
+      }
+    }
+  });
+}
 
 // ============================================================================
 // Skaerm-stak
@@ -593,18 +643,25 @@ var homeScreen = makeScreen('home', function (screen, root) {
   function applyParallax() { Ambient.parallax(focus.index, MENU.length); }
   applyParallax();
 
+  function openTarget(target) {
+    if (target === 'photos') Screens.push(photosScreen);
+    else if (target === 'videos') Screens.push(videosScreen);
+    else if (target === 'steam') Screens.push(steamScreen);
+    else if (target === 'retro') Screens.push(retroScreen);
+    else if (target === 'settings') Screens.push(settingsScreen);
+  }
+
+  cards.forEach(function (card) {
+    tapToFocus(focus, card, function () { openTarget(card.dataset.target); }, applyParallax);
+  });
+
   screen.enter = function () { focus.applyFocus(false); applyParallax(); };
   screen.hints = function () { return [['A', 'Åbn'], ['✚', 'Navigér']]; };
   screen.onInput = function (action) {
     if (action === 'left' || action === 'up') { focus.move('left'); applyParallax(); }
     else if (action === 'right' || action === 'down') { focus.move('right'); applyParallax(); }
     else if (action === 'a') {
-      var target = focus.current && focus.current.dataset.target;
-      if (target === 'photos') Screens.push(photosScreen);
-      else if (target === 'videos') Screens.push(videosScreen);
-      else if (target === 'steam') Screens.push(steamScreen);
-      else if (target === 'retro') Screens.push(retroScreen);
-      else if (target === 'settings') Screens.push(settingsScreen);
+      openTarget(focus.current && focus.current.dataset.target);
     }
   };
 });
@@ -619,6 +676,12 @@ function conceptToast() {
 
 function makeSection(id, title, subtitle, cols, buildTiles) {
   return makeScreen(id, function (screen, root) {
+    var back = el('div', 'back-pill');
+    back.appendChild(el('span', null, '‹'));
+    back.appendChild(el('span', null, 'Hjem'));
+    back.addEventListener('click', function () { Screens.pop(); });
+    root.appendChild(back);
+
     root.appendChild(el('h2', 'screen-title', title));
     root.appendChild(el('p', 'screen-subtitle', subtitle));
     var area = el('div', 'scroll-area');
@@ -630,6 +693,9 @@ function makeSection(id, title, subtitle, cols, buildTiles) {
     var focus = new Grid(cols);
     var tiles = buildTiles(grid);
     focus.setItems(tiles);
+    tiles.forEach(function (tile) {
+      tapToFocus(focus, tile, conceptToast);
+    });
 
     screen.enter = function () { focus.index = 0; focus.applyFocus(false); };
     screen.hints = function () { return [['A', 'Åbn'], ['B', 'Hjem'], ['✚', 'Navigér']]; };
@@ -783,12 +849,14 @@ updateClock();
 setInterval(updateClock, 15000);
 
 var introOpen = true;
+function dismissIntro() {
+  introOpen = false;
+  document.getElementById('intro').classList.add('gone');
+}
+document.getElementById('intro').addEventListener('click', dismissIntro);
 Input.on(function (action) {
   if (introOpen) {
-    if (action === 'a' || action === 'b') {
-      introOpen = false;
-      document.getElementById('intro').classList.add('gone');
-    }
+    if (action === 'a' || action === 'b') dismissIntro();
     return;
   }
   Screens.handle(action);
