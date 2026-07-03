@@ -49,6 +49,10 @@ Indstillinger gemmes i `config.json` under Electrons brugerdata-mappe (fx `~/.co
 - **Billeder:** JPG, PNG, GIF, WebP, AVIF, BMP
 - **Video:** MP4, M4V, WebM, MOV (MKV vises, men afspilning afhænger af codec)
 
+## Design
+
+Skandinavisk og roligt: kølig grafit-baggrund, flade paneler med hårfine kanter, dæmpet nordisk isblå accent og rene SVG-stregikoner. Hjemmeskærmen har en levende, nedtonet baggrund, der stille skifter mellem dine egne billeder. Skærmskift glider blødt ind, og fokusringen er tydelig på sofaafstand. Alle animationer respekterer `prefers-reduced-motion`.
+
 ## Optimeret til 55–75" TV
 
 - Hele UI'et skalerer med skærmhøjden (`rem` bundet til `vh`), så det ser ens ud på 1080p og 4K TV.

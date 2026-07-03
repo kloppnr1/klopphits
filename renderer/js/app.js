@@ -6,6 +6,29 @@
 const api = window.api;
 
 // ---------------------------------------------------------------------------
+// Ikoner (rene stregikoner, farves med currentColor)
+// ---------------------------------------------------------------------------
+
+const STROKE = 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"';
+
+const ICONS = {
+  photos: `<svg viewBox="0 0 24 24" ${STROKE}><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M3 17l5-4 4 3 4.5-4.5L21 16"/></svg>`,
+  videos: `<svg viewBox="0 0 24 24" ${STROKE}><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 9.5h3.5M3 14.5h3.5M17.5 9.5H21M17.5 14.5H21M6.5 5v14M17.5 5v14"/><path d="M10.6 9.8v4.4l3.8-2.2z" fill="currentColor" stroke="none"/></svg>`,
+  steam: `<svg viewBox="0 0 24 24" ${STROKE}><path d="M6.8 7.5h10.4a4.8 4.8 0 0 1 4.77 5.3c-.2 1.9-1.7 3.7-3.67 3.7-1.11 0-2.16-.53-2.83-1.42L14.3 13.6H9.7l-1.17 1.48c-.67.89-1.72 1.42-2.83 1.42-1.97 0-3.47-1.8-3.67-3.7A4.8 4.8 0 0 1 6.8 7.5z"/><path d="M8.2 10.4v3M6.7 11.9h3"/><circle cx="15.3" cy="11" r="0.9" fill="currentColor" stroke="none"/><circle cx="17.6" cy="12.9" r="0.9" fill="currentColor" stroke="none"/></svg>`,
+  retro: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 4h2v2H5zM17 4h2v2h-2zM7 6h2v2H7zM15 6h2v2h-2zM5 8h14v2H5zM3 10h4v2H3zM9 10h6v2H9zM17 10h4v2h-4zM1 12h22v2H1zM1 14h2v2H1zM5 14h14v2H5zM21 14h2v2h-2zM1 16h2v2H1zM5 16h2v2H5zM17 16h2v2h-2zM21 16h2v2h-2zM7 18h4v2H7zM13 18h4v2h-4z"/></svg>`,
+  settings: `<svg viewBox="0 0 24 24" ${STROKE}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .33 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.6 1.6 0 0 0 15 19.4a1.6 1.6 0 0 0-1 1.47V21a2 2 0 1 1-4 0v-.09A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.77.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.6 1.6 0 0 0 4.6 15a1.6 1.6 0 0 0-1.47-1H3a2 2 0 1 1 0-4h.09A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.33-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.6 1.6 0 0 0 9 4.6a1.6 1.6 0 0 0 1-1.47V3a2 2 0 1 1 4 0v.09a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.6 1.6 0 0 0 19.4 9c.26.6.86 1 1.51 1H21a2 2 0 1 1 0 4h-.09c-.65 0-1.25.4-1.51 1z"/></svg>`,
+  folder: `<svg viewBox="0 0 24 24" ${STROKE}><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`,
+  up: `<svg viewBox="0 0 24 24" ${STROKE}><path d="M12 19V5M5 12l7-7 7 7"/></svg>`,
+  power: `<svg viewBox="0 0 24 24" ${STROKE}><path d="M12 3v8"/><path d="M6.3 6.5a8 8 0 1 0 11.4 0"/></svg>`
+};
+
+function icon(name) {
+  const wrap = el('span', 'icon-wrap');
+  wrap.innerHTML = ICONS[name];
+  return wrap;
+}
+
+// ---------------------------------------------------------------------------
 // Smaa hjaelpere
 // ---------------------------------------------------------------------------
 
@@ -46,6 +69,47 @@ function setHints(hints) {
     bar.appendChild(h);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Levende baggrund paa hjemmeskaermen (dine egne billeder, nedtonet)
+// ---------------------------------------------------------------------------
+
+const Ambient = (() => {
+  const root = document.getElementById('ambient');
+  const layers = [el('div', 'amb-layer'), el('div', 'amb-layer')];
+  layers.forEach((l) => root.appendChild(l));
+
+  let photos = [];
+  let active = 0;
+  let timer = null;
+  let lastScan = 0;
+
+  function next() {
+    if (!photos.length) return;
+    const pick = photos[Math.floor(Math.random() * photos.length)];
+    active = 1 - active;
+    layers[active].style.backgroundImage = `url("${pick.fileUrl}")`;
+    layers[active].classList.add('visible');
+    layers[1 - active].classList.remove('visible');
+  }
+
+  async function refresh() {
+    if (Date.now() - lastScan < 60000) return;
+    lastScan = Date.now();
+    const result = await api.listMedia('photos');
+    photos = result.items || [];
+    if (photos.length && !timer) {
+      next();
+      timer = setInterval(next, 25000);
+    } else if (!photos.length && timer) {
+      clearInterval(timer);
+      timer = null;
+      layers.forEach((l) => l.classList.remove('visible'));
+    }
+  }
+
+  return { refresh };
+})();
 
 // ---------------------------------------------------------------------------
 // Fokus-gitter: haandterer markering og bevaegelse i et grid/liste
@@ -102,19 +166,22 @@ class Grid {
 }
 
 // ---------------------------------------------------------------------------
-// Skaerm-haandtering (stak: oeverste skaerm modtager input)
+// Skaerm-haandtering (stak: kun oeverste skaerm er synlig og modtager input)
 // ---------------------------------------------------------------------------
 
 const Screens = {
   stack: [],
 
   push(screen, params) {
-    const top = this.top();
-    if (top && top.pause) top.pause();
+    const prev = this.top();
+    if (prev) {
+      if (prev.pause) prev.pause();
+      prev.el.classList.remove('active');
+    }
     this.stack.push(screen);
     screen.el.classList.add('active');
     if (screen.enter) screen.enter(params);
-    this.refreshHints();
+    this.refresh();
   },
 
   pop() {
@@ -124,17 +191,21 @@ const Screens = {
       screen.el.classList.remove('active');
     }
     const top = this.top();
-    if (top && top.resume) top.resume();
-    this.refreshHints();
+    if (top) {
+      top.el.classList.add('active');
+      if (top.resume) top.resume();
+    }
+    this.refresh();
   },
 
   top() {
     return this.stack[this.stack.length - 1] || null;
   },
 
-  refreshHints() {
+  refresh() {
     const top = this.top();
     setHints(top && top.hints ? top.hints() : []);
+    document.body.classList.toggle('on-home', top === homeScreen);
   },
 
   handle(action) {
@@ -158,11 +229,11 @@ function makeScreen(id, build) {
 // ---------------------------------------------------------------------------
 
 const MENU = [
-  { id: 'photos', icon: '🖼️', label: 'Billeder', sub: 'Dine private billeder' },
-  { id: 'videos', icon: '🎬', label: 'Videoklip', sub: 'Dine private videoer' },
-  { id: 'steam', icon: '🎮', label: 'Steam', sub: 'Installerede Steam-spil' },
-  { id: 'retro', icon: '👾', label: 'Retro Spil', sub: 'Online retro-klassikere' },
-  { id: 'settings', icon: '⚙️', label: 'Indstillinger', sub: 'Mapper og program' }
+  { id: 'photos', icon: 'photos', label: 'Billeder', sub: 'Dine private billeder' },
+  { id: 'videos', icon: 'videos', label: 'Videoklip', sub: 'Dine private videoer' },
+  { id: 'steam', icon: 'steam', label: 'Steam', sub: 'Installerede Steam-spil' },
+  { id: 'retro', icon: 'retro', label: 'Retro spil', sub: 'Online retro-klassikere' },
+  { id: 'settings', icon: 'settings', label: 'Indstillinger', sub: 'Mapper og program' }
 ];
 
 const homeScreen = makeScreen('home', (screen, root) => {
@@ -177,7 +248,7 @@ const homeScreen = makeScreen('home', (screen, root) => {
   const tiles = MENU.map((m) => {
     const tile = el('div', 'tile menu-tile');
     tile.dataset.target = m.id;
-    tile.appendChild(el('div', 'icon', m.icon));
+    tile.appendChild(icon(m.icon));
     tile.appendChild(el('div', 'label', m.label));
     tile.appendChild(el('div', 'sub', m.sub));
     grid.appendChild(tile);
@@ -185,14 +256,18 @@ const homeScreen = makeScreen('home', (screen, root) => {
   });
   focus.setItems(tiles);
 
-  screen.enter = () => focus.applyFocus();
+  screen.enter = () => {
+    focus.applyFocus();
+    Ambient.refresh();
+  };
+  screen.resume = () => Ambient.refresh();
   screen.hints = () => [
     ['A', 'Vælg'],
-    ['✚', 'Naviger']
+    ['✚', 'Navigér']
   ];
   screen.onInput = (action) => {
     if (['up', 'down', 'left', 'right'].includes(action)) {
-      // Enkelt raekke: op/ned goer ingenting, venstre/hoejre flytter
+      // Enkelt raekke: op/ned mappes til venstre/hoejre
       focus.move(action === 'up' ? 'left' : action === 'down' ? 'right' : action);
     } else if (action === 'a') {
       const target = focus.current && focus.current.dataset.target;
@@ -229,7 +304,7 @@ function makeGalleryScreen({ id, title, kind, cols, makeTile, onSelect, emptyMsg
       if (!result.dir) {
         subtitle.textContent = '';
         const empty = el('div', 'empty-state');
-        empty.appendChild(el('div', 'icon', '📁'));
+        empty.appendChild(icon('folder'));
         empty.appendChild(el('div', 'msg', emptyMsg + ' Tryk A for at vælge en mappe i Indstillinger.'));
         area.appendChild(empty);
         focus.setItems([]);
@@ -239,7 +314,7 @@ function makeGalleryScreen({ id, title, kind, cols, makeTile, onSelect, emptyMsg
       subtitle.textContent = `${items.length} filer · ${result.dir}`;
       if (!items.length) {
         const empty = el('div', 'empty-state');
-        empty.appendChild(el('div', 'icon', '🫥'));
+        empty.appendChild(icon('folder'));
         empty.appendChild(el('div', 'msg', 'Mappen er tom. Læg filer i ' + result.dir));
         area.appendChild(empty);
         focus.setItems([]);
@@ -263,7 +338,7 @@ function makeGalleryScreen({ id, title, kind, cols, makeTile, onSelect, emptyMsg
     screen.hints = () => [
       ['A', 'Åbn'],
       ['B', 'Tilbage'],
-      ['✚', 'Naviger']
+      ['✚', 'Navigér']
     ];
 
     screen.onInput = (action) => {
@@ -285,7 +360,7 @@ function makeGalleryScreen({ id, title, kind, cols, makeTile, onSelect, emptyMsg
 
 const photosScreen = makeGalleryScreen({
   id: 'photos',
-  title: '🖼️ Billeder',
+  title: 'Billeder',
   kind: 'photos',
   cols: 5,
   emptyMsg: 'Der er ikke valgt en billedmappe endnu.',
@@ -305,7 +380,7 @@ const photosScreen = makeGalleryScreen({
 
 const videosScreen = makeGalleryScreen({
   id: 'videos',
-  title: '🎬 Videoklip',
+  title: 'Videoklip',
   kind: 'videos',
   cols: 4,
   emptyMsg: 'Der er ikke valgt en videomappe endnu.',
@@ -345,7 +420,7 @@ const photoViewer = (() => {
     const item = items[index];
     if (!item) return;
     img.src = item.fileUrl;
-    info.textContent = `${index + 1} / ${items.length} · ${item.name}` + (slideTimer ? ' · ▶ Diasshow' : '');
+    info.textContent = `${index + 1} / ${items.length} · ${item.name}` + (slideTimer ? ' · Diasshow' : '');
   }
 
   function step(delta) {
@@ -432,7 +507,7 @@ const videoPlayer = (() => {
     const dur = video.duration || 0;
     const cur = video.currentTime || 0;
     osdProgress.style.width = dur ? (cur / dur) * 100 + '%' : '0%';
-    osdTime.textContent = `${formatTime(cur)} / ${formatTime(dur)}  ·  🔊 ${Math.round(video.volume * 100)}%`;
+    osdTime.textContent = `${formatTime(cur)} / ${formatTime(dur)}  ·  Lyd ${Math.round(video.volume * 100)} %`;
   }
 
   function load(i) {
@@ -502,7 +577,7 @@ const videoPlayer = (() => {
 // ---------------------------------------------------------------------------
 
 const steamScreen = makeScreen('steam', (screen, root) => {
-  root.appendChild(el('h2', 'screen-title', '🎮 Steam'));
+  root.appendChild(el('h2', 'screen-title', 'Steam'));
   const subtitle = el('p', 'screen-subtitle', '');
   root.appendChild(subtitle);
   const area = el('div', 'scroll-area');
@@ -528,7 +603,7 @@ const steamScreen = makeScreen('steam', (screen, root) => {
     if (!result.found) {
       subtitle.textContent = '';
       const empty = el('div', 'empty-state');
-      empty.appendChild(el('div', 'icon', '🚫'));
+      empty.appendChild(icon('steam'));
       empty.appendChild(el('div', 'msg', 'Steam blev ikke fundet på denne maskine. Installér Steam for at se dine spil her.'));
       area.appendChild(empty);
       focus.setItems([]);
@@ -538,7 +613,7 @@ const steamScreen = makeScreen('steam', (screen, root) => {
     subtitle.textContent = `${games.length} installerede spil`;
     if (!games.length) {
       const empty = el('div', 'empty-state');
-      empty.appendChild(el('div', 'icon', '🫥'));
+      empty.appendChild(icon('steam'));
       empty.appendChild(el('div', 'msg', 'Ingen installerede spil fundet i Steam-biblioteket.'));
       area.appendChild(empty);
       focus.setItems([]);
@@ -575,7 +650,7 @@ const steamScreen = makeScreen('steam', (screen, root) => {
     ['A', 'Start spil'],
     ['B', 'Tilbage'],
     ['Y', 'Steam Big Picture'],
-    ['✚', 'Naviger']
+    ['✚', 'Navigér']
   ];
 
   screen.onInput = (action) => {
@@ -599,7 +674,7 @@ const steamScreen = makeScreen('steam', (screen, root) => {
 // ---------------------------------------------------------------------------
 
 const retroScreen = makeScreen('retro', (screen, root) => {
-  root.appendChild(el('h2', 'screen-title', '👾 Retro Spil'));
+  root.appendChild(el('h2', 'screen-title', 'Retro spil'));
   root.appendChild(
     el('p', 'screen-subtitle', 'Online retro-spil i fuld skærm. Hold SELECT + START på controlleren for at vende tilbage.')
   );
@@ -621,7 +696,10 @@ const retroScreen = makeScreen('retro', (screen, root) => {
     const tiles = sites.map((site, i) => {
       const tile = el('div', 'tile retro-tile');
       tile.dataset.index = i;
-      tile.appendChild(el('div', 'name', '👾 ' + site.name));
+      const name = el('div', 'name');
+      name.appendChild(icon('retro'));
+      name.appendChild(el('span', null, site.name));
+      tile.appendChild(name);
       tile.appendChild(el('div', 'desc', site.description || ''));
       tile.appendChild(el('div', 'url', site.url));
       grid.appendChild(tile);
@@ -635,7 +713,7 @@ const retroScreen = makeScreen('retro', (screen, root) => {
   screen.hints = () => [
     ['A', 'Åbn'],
     ['B', 'Tilbage'],
-    ['✚', 'Naviger']
+    ['✚', 'Navigér']
   ];
 
   screen.onInput = (action) => {
@@ -656,7 +734,7 @@ const retroScreen = makeScreen('retro', (screen, root) => {
 // ---------------------------------------------------------------------------
 
 const folderPicker = makeScreen('folder-picker', (screen, root) => {
-  root.appendChild(el('h2', 'screen-title', '📁 Vælg mappe'));
+  root.appendChild(el('h2', 'screen-title', 'Vælg mappe'));
   const pathLabel = el('p', 'screen-subtitle', '');
   root.appendChild(pathLabel);
   const area = el('div', 'scroll-area');
@@ -666,6 +744,16 @@ const folderPicker = makeScreen('folder-picker', (screen, root) => {
   let current = null;
   let parent = null;
   let onPick = null;
+
+  function makeRow(iconName, label, dir) {
+    const row = el('div', 'row-item');
+    if (dir) row.dataset.dir = dir;
+    const lab = el('div', 'row-label');
+    lab.appendChild(icon(iconName));
+    lab.appendChild(el('span', null, label));
+    row.appendChild(lab);
+    return row;
+  }
 
   async function browse(dirPath) {
     const result = await api.listDirs(dirPath);
@@ -679,22 +767,18 @@ const folderPicker = makeScreen('folder-picker', (screen, root) => {
 
     const items = [];
     if (parent) {
-      const up = el('div', 'row-item');
-      up.dataset.dir = '..';
-      up.appendChild(el('div', 'row-label', '⬆️  .. (op)'));
+      const up = makeRow('up', 'Op til overmappe', '..');
       rows.appendChild(up);
       items.push(up);
     }
     for (const name of result.dirs) {
-      const row = el('div', 'row-item');
-      row.dataset.dir = name;
-      row.appendChild(el('div', 'row-label', '📁 ' + name));
+      const row = makeRow('folder', name, name);
       rows.appendChild(row);
       items.push(row);
     }
     if (!items.length) {
       const msg = el('div', 'row-item');
-      msg.appendChild(el('div', 'row-label', '(ingen undermapper)'));
+      msg.appendChild(el('div', 'row-value', 'Ingen undermapper'));
       rows.appendChild(msg);
     }
     focus.index = 0;
@@ -710,7 +794,7 @@ const folderPicker = makeScreen('folder-picker', (screen, root) => {
     ['A', 'Åbn mappe'],
     ['X', 'Vælg denne mappe'],
     ['B', 'Annullér'],
-    ['✚', 'Naviger']
+    ['✚', 'Navigér']
   ];
   screen.onInput = (action) => {
     if (action === 'up' || action === 'down') {
@@ -734,7 +818,7 @@ const folderPicker = makeScreen('folder-picker', (screen, root) => {
 // ---------------------------------------------------------------------------
 
 const settingsScreen = makeScreen('settings', (screen, root) => {
-  root.appendChild(el('h2', 'screen-title', '⚙️ Indstillinger'));
+  root.appendChild(el('h2', 'screen-title', 'Indstillinger'));
   root.appendChild(el('p', 'screen-subtitle', 'Vælg hvor dine billeder og videoklip ligger.'));
   const area = el('div', 'scroll-area');
   root.appendChild(area);
@@ -749,15 +833,18 @@ const settingsScreen = makeScreen('settings', (screen, root) => {
     area.appendChild(rows);
 
     const defs = [
-      { id: 'photosDir', label: '🖼️ Billedmappe', value: cfg.photosDir || 'Ikke valgt' },
-      { id: 'videosDir', label: '🎬 Videomappe', value: cfg.videosDir || 'Ikke valgt' },
-      { id: 'quit', label: '⏻ Afslut KloppHits', value: '', danger: true }
+      { id: 'photosDir', icon: 'photos', label: 'Billedmappe', value: cfg.photosDir || 'Ikke valgt' },
+      { id: 'videosDir', icon: 'videos', label: 'Videomappe', value: cfg.videosDir || 'Ikke valgt' },
+      { id: 'quit', icon: 'power', label: 'Afslut KloppHits', value: '', danger: true }
     ];
 
     const items = defs.map((d) => {
       const row = el('div', 'row-item' + (d.danger ? ' danger' : ''));
       row.dataset.id = d.id;
-      row.appendChild(el('div', 'row-label', d.label));
+      const lab = el('div', 'row-label');
+      lab.appendChild(icon(d.icon));
+      lab.appendChild(el('span', null, d.label));
+      row.appendChild(lab);
       row.appendChild(el('div', 'row-value', d.value));
       rows.appendChild(row);
       return row;
@@ -775,7 +862,7 @@ const settingsScreen = makeScreen('settings', (screen, root) => {
   screen.hints = () => [
     ['A', 'Vælg'],
     ['B', 'Tilbage'],
-    ['✚', 'Naviger']
+    ['✚', 'Navigér']
   ];
   screen.onInput = (action) => {
     if (action === 'up' || action === 'down') {
