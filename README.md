@@ -12,6 +12,14 @@ Bygget med [Electron](https://www.electronjs.org/) og browserens Gamepad API. In
 - **👾 Retro Spil** — kuraterede online retro-platforme (Internet Arcade, Console Living Room, MS-DOS Games, itch.io) åbnes i fuld skærm. De fleste web-emulatorer understøtter controlleren direkte. **Hold SELECT + START i 1 sekund** for at vende tilbage til KloppHits.
 - **⚙️ Indstillinger** — vælg billed- og videomappe med en controller-venlig mappevælger. Gemmes i din brugerprofil.
 
+## Koncept-UI (live demo)
+
+Konceptet for stil og primær navigation ligger som statisk side i `docs/` og deployes automatisk til GitHub Pages:
+
+**https://kloppnr1.github.io/klopphits/**
+
+Navigér med controller eller tastatur (piletaster, Enter = A, Esc = B).
+
 ## Kom i gang
 
 Kræver [Node.js](https://nodejs.org/) 18+.
