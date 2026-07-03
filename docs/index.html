@@ -7,11 +7,13 @@
 </head>
 <body>
 <style>
-  /* KloppHits koncept-UI — kun stil og primaer navigation.
-     Skandinavisk identitet: koelig grafit, haarfine kanter, nordisk isblaa
-     accent, rene stregikoner, luft og rolige overgange.
-     Bevidst kun moerkt tema: det er et TV-interface.
-     1rem skalerer med skaermhoejden, saa alt ser ens ud paa 1080p og 4K. */
+  /* KloppHits koncept-UI — Apple TV-inspireret fuldskaermsnavigation.
+     Hver sektion fylder hele skaermen med et stemningsfuldt hero-baggrunds-
+     billede der crossfader ved fokusskift. I den rigtige app er baggrundene
+     dine egne billeder, videostills og Steam-covers.
+     Skandinavisk identitet: koelig grafit, nordisk isblaa accent, rene
+     stregikoner, luft og rolige overgange. Bevidst kun moerkt tema (TV).
+     1rem skalerer med skaermen, saa alt ser ens ud paa 1080p og 4K. */
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -46,25 +48,31 @@
     user-select: none;
   }
 
-  /* ---- Levende baggrund med let parallakse ---- */
+  /* ---- Fuldskaerms hero-baggrund ---- */
 
-  #ambient { position: fixed; inset: -3vw; z-index: 0; opacity: 0; transition: opacity 1s ease; pointer-events: none; }
-  body.on-home #ambient { opacity: 1; }
+  #ambient { position: fixed; inset: -3vw; z-index: 0; pointer-events: none; }
   #ambient .amb-layer {
     position: absolute; inset: 0;
-    background-size: cover; background-position: center;
-    filter: brightness(0.55) saturate(0.55);
     opacity: 0;
-    transition: opacity 2.5s ease, transform 1.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+    transition: opacity 1.1s ease;
+    animation: slowZoom 36s ease-in-out infinite alternate;
   }
   #ambient .amb-layer.visible { opacity: 1; }
-  #ambient::after {
-    content: '';
-    position: absolute; inset: 0;
-    background:
-      linear-gradient(rgba(16, 18, 22, 0.25), rgba(16, 18, 22, 0.66) 78%, var(--bg)),
-      radial-gradient(90vw 80vh at 50% 30%, transparent 0%, rgba(16, 18, 22, 0.5) 100%);
+  @keyframes slowZoom {
+    from { transform: scale(1); }
+    to { transform: scale(1.07); }
   }
+  #ambient .amb-vignette {
+    position: absolute; inset: 0;
+    background: linear-gradient(rgba(16, 18, 22, 0.12) 0%, rgba(16, 18, 22, 0.34) 55%, var(--bg) 97%);
+  }
+  #ambient .amb-dim {
+    position: absolute; inset: 0;
+    background: rgba(16, 18, 22, 0.62);
+    opacity: 0;
+    transition: opacity 0.45s ease;
+  }
+  body.in-section #ambient .amb-dim { opacity: 1; }
 
   #app { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
 
@@ -96,101 +104,77 @@
     to { opacity: 1; transform: none; }
   }
 
-  /* ---- Hjem: hilsen + navigations-rail ---- */
+  /* ---- Hjem: fuldskaerms hero + pille-navigation ---- */
 
   #screen-home { justify-content: flex-end; gap: 2.6rem; padding-bottom: 2rem; }
 
-  .greeting { display: flex; flex-direction: column; gap: 0.5rem; }
-  .greeting .hello {
-    font-size: 4.6rem;
+  .hero { display: flex; flex-direction: column; gap: 0.9rem; }
+  .hero .eyebrow {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .hero .hero-title {
+    font-size: 6.4rem;
     font-weight: 200;
-    letter-spacing: -0.01em;
-    line-height: 1.05;
+    letter-spacing: -0.015em;
+    line-height: 1.02;
     text-wrap: balance;
   }
-  .greeting .date {
-    font-size: 1.45rem;
+  .hero .hero-desc {
+    font-size: 1.5rem;
     font-weight: 400;
     color: var(--text-dim);
-    letter-spacing: 0.02em;
+    max-width: 46ch;
+    line-height: 1.5;
+  }
+  .hero.swap .hero-title, .hero.swap .hero-desc {
+    animation: heroIn 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+  .hero.swap .hero-desc { animation-delay: 0.06s; }
+  @keyframes heroIn {
+    from { opacity: 0; transform: translateY(1rem); }
+    to { opacity: 1; transform: none; }
   }
 
   .rail {
-    display: flex; gap: 1.3rem; align-items: stretch;
+    display: flex; gap: 1rem; align-items: center;
     overflow-x: auto; scrollbar-width: none;
     padding: 0.5rem 0.4rem;
   }
   .rail::-webkit-scrollbar { display: none; }
-  .rail .card { flex: 0 0 auto; }
 
   .card {
-    position: relative;
-    width: 13rem;
-    height: 16rem;
-    border-radius: var(--radius);
-    background: rgba(32, 36, 43, 0.72);
-    border: 1px solid var(--line);
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 0.9rem;
+    padding: 0.95rem 1.7rem;
+    border-radius: 999px;
+    background: rgba(25, 28, 34, 0.55);
+    border: 1px solid rgba(44, 49, 58, 0.8);
     backdrop-filter: blur(10px);
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding: 1.6rem 1.7rem;
-    overflow: hidden;
+    color: var(--text-dim);
     outline: var(--focus-width) solid transparent;
     outline-offset: -1px;
-    transition:
-      width 0.38s cubic-bezier(0.22, 0.61, 0.36, 1),
-      outline-color 0.2s ease,
-      border-color 0.2s ease,
-      box-shadow 0.25s ease,
-      background-color 0.25s ease;
+    transition: background-color 0.25s ease, color 0.25s ease, outline-color 0.2s ease,
+      border-color 0.2s ease, box-shadow 0.25s ease, transform 0.25s ease;
   }
   .card.focused {
-    width: 27rem;
-    background: rgba(35, 40, 48, 0.88);
+    background: rgba(35, 40, 48, 0.85);
+    color: var(--text);
     outline-color: var(--accent);
     border-color: transparent;
-    box-shadow: 0 0 0 var(--focus-width) var(--accent-glow), 0 1.4rem 3.5rem rgba(0, 0, 0, 0.55);
+    box-shadow: 0 0 0 var(--focus-width) var(--accent-glow), 0 0.9rem 2.4rem rgba(0, 0, 0, 0.5);
+    transform: translateY(-0.2rem);
   }
-
-  .card .icon-wrap { position: absolute; top: 1.6rem; left: 1.7rem; }
-  .card .icon-wrap svg {
-    width: 3rem; height: 3rem;
-    color: var(--text-dim);
-    transition: color 0.25s ease;
-  }
+  .card .icon-wrap svg { width: 1.7rem; height: 1.7rem; color: currentColor; transition: color 0.25s ease; }
   .card.focused .icon-wrap svg { color: var(--accent); }
+  .card .label { font-size: 1.3rem; font-weight: 600; white-space: nowrap; }
 
-  .card .label {
-    font-size: 1.5rem;
-    font-weight: 650;
-    white-space: nowrap;
-  }
-  .card .desc {
-    width: 21rem;
-    font-size: 1.15rem;
-    line-height: 1.45;
-    color: var(--text-dim);
-    max-height: 0;
-    opacity: 0;
-    overflow: hidden;
-    transition: max-height 0.38s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.3s ease 0.12s, margin-top 0.38s ease;
-  }
-  .card.focused .desc { max-height: 6rem; opacity: 1; margin-top: 0.5rem; }
+  /* ---- Sektionssider (indhold over hero-baggrunden) ---- */
 
-  .card .open-chip {
-    position: absolute;
-    top: 1.6rem; right: 1.6rem;
-    display: flex; align-items: center; gap: 0.55rem;
-    font-size: 1rem; font-weight: 600; color: var(--text-dim);
-    opacity: 0;
-    transition: opacity 0.3s ease 0.15s;
-  }
-  .card.focused .open-chip { opacity: 1; }
-
-  /* ---- Sektionssider ---- */
-
-  .screen-title { font-size: 2.5rem; font-weight: 650; margin: 1.6rem 0 0.3rem; text-wrap: balance; }
+  .screen-title { font-size: 2.8rem; font-weight: 200; letter-spacing: -0.01em; margin: 0.6rem 0 0.2rem; text-wrap: balance; }
   .screen-subtitle { font-size: 1.3rem; font-weight: 400; color: var(--text-dim); margin-bottom: 0.9rem; }
   .scroll-area { flex: 1 1 auto; overflow-y: auto; scrollbar-width: none; padding: 1.3rem 0.5rem 3rem; }
   .scroll-area::-webkit-scrollbar { display: none; }
@@ -200,8 +184,9 @@
   .tile {
     position: relative;
     border-radius: var(--radius);
-    background: var(--panel);
-    border: 1px solid var(--line);
+    background: rgba(32, 36, 43, 0.66);
+    border: 1px solid rgba(44, 49, 58, 0.8);
+    backdrop-filter: blur(8px);
     overflow: hidden;
     transition: transform 0.15s ease, box-shadow 0.15s ease, outline-color 0.15s ease, border-color 0.15s ease;
     outline: var(--focus-width) solid transparent;
@@ -231,7 +216,7 @@
     font-size: 0.95rem; font-weight: 700; font-variant-numeric: tabular-nums;
   }
 
-  .tile.steam-tile { aspect-ratio: 2 / 3; background: var(--bg-soft); }
+  .tile.steam-tile { aspect-ratio: 2 / 3; }
   .tile.steam-tile .fallback {
     position: absolute; inset: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -250,7 +235,8 @@
     display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;
     padding: 1.5rem 2rem;
     border-radius: var(--radius);
-    background: var(--panel); border: 1px solid var(--line);
+    background: rgba(32, 36, 43, 0.66); border: 1px solid rgba(44, 49, 58, 0.8);
+    backdrop-filter: blur(8px);
     outline: var(--focus-width) solid transparent; outline-offset: -1px;
     transition: transform 0.12s ease, outline-color 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
   }
@@ -294,6 +280,22 @@
   }
   .hidden { opacity: 0; pointer-events: none; }
 
+  /* ---- Touch: tilbage-knap ---- */
+
+  .back-pill {
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    align-self: flex-start;
+    margin-top: 1.2rem;
+    padding: 0.5rem 1.3rem;
+    border-radius: 999px;
+    background: rgba(25, 28, 34, 0.85);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    font-size: 1.15rem; font-weight: 600;
+    cursor: pointer;
+  }
+  .back-pill:active { outline: var(--focus-width) solid var(--accent); color: var(--text); }
+
   /* ---- Intro ---- */
 
   #intro {
@@ -317,35 +319,18 @@
     padding: 0.1rem 0.55rem; font-family: inherit; font-size: 1rem; font-weight: 700;
   }
 
-  /* ---- Touch: tilbage-knap ---- */
-
-  .back-pill {
-    display: inline-flex; align-items: center; gap: 0.6rem;
-    align-self: flex-start;
-    margin-top: 1.2rem;
-    padding: 0.5rem 1.3rem;
-    border-radius: 999px;
-    background: rgba(25, 28, 34, 0.85);
-    border: 1px solid var(--line);
-    color: var(--text-dim);
-    font-size: 1.15rem; font-weight: 600;
-    cursor: pointer;
-  }
-  .back-pill:active { outline: var(--focus-width) solid var(--accent); color: var(--text); }
-
   /* ---- Mobil/portraet: forhaandsvisning af TV-konceptet ---- */
 
   @media (orientation: portrait) {
     .grid { grid-template-columns: repeat(2, 1fr) !important; }
-    .greeting .hello { font-size: 3.4rem; }
+    .hero .hero-title { font-size: 4rem; }
     #hints { display: none; }
     #screen-home { padding-bottom: 1.4rem; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .tile, .row-item, .card, .card .desc, .card .icon-wrap svg,
-    #ambient, #ambient .amb-layer { transition: none; }
-    .screen.active { animation: none; }
+    .tile, .row-item, .card, #ambient .amb-layer, #ambient .amb-dim { transition: none; animation: none; }
+    .screen.active, .hero.swap .hero-title, .hero.swap .hero-desc { animation: none; }
   }
 </style>
 
@@ -363,7 +348,7 @@
 <div id="intro">
   <div class="intro-card">
     <h1>klopp<span>hits</span> · koncept-UI</h1>
-    <p>Kun stil og primær navigation — ingen funktioner. Controller: D-pad/stik, A = åbn, B = tilbage. Tastatur: <kbd>piletaster</kbd>, <kbd>Enter</kbd>, <kbd>Esc</kbd>. Touch: tryk på et kort for at vælge det, tryk igen for at åbne — og brug ‹ Hjem for at gå tilbage.</p>
+    <p>Kun stil og primær navigation — ingen funktioner. Hver sektion fylder hele skærmen med sit eget baggrundsbillede (i den rigtige app: dine billeder og Steam-covers). Controller: D-pad/stik, A = åbn, B = tilbage. Tastatur: <kbd>piletaster</kbd>, <kbd>Enter</kbd>, <kbd>Esc</kbd>. Touch: tryk for at vælge, tryk igen for at åbne, ‹ Hjem går tilbage.</p>
     <div class="go">Tryk hvor som helst for at starte</div>
   </div>
 </div>
@@ -431,6 +416,53 @@ function scene(hue1, hue2, emoji) {
 }
 
 // ============================================================================
+// Hero-scener pr. sektion (i den rigtige app: dine billeder & Steam-covers)
+// ============================================================================
+
+var HEROES = {
+  photos:
+    'radial-gradient(58vw 42vh at 72% 28%, rgba(255, 186, 116, 0.5), transparent 62%),' +
+    'radial-gradient(90vw 30vh at 50% 78%, rgba(80, 52, 38, 0.55), transparent 70%),' +
+    'linear-gradient(165deg, #6e4426 0%, #33231d 55%, #14161a 100%)',
+  videos:
+    'radial-gradient(52vw 38vh at 26% 24%, rgba(138, 188, 228, 0.4), transparent 62%),' +
+    'radial-gradient(40vw 30vh at 80% 70%, rgba(60, 96, 130, 0.35), transparent 65%),' +
+    'linear-gradient(200deg, #27455e 0%, #17222d 55%, #101216 100%)',
+  steam:
+    'radial-gradient(46vw 46vh at 74% 58%, rgba(116, 88, 214, 0.36), transparent 62%),' +
+    'radial-gradient(32vw 32vh at 20% 22%, rgba(76, 156, 214, 0.3), transparent 62%),' +
+    'linear-gradient(180deg, #1d2233 0%, #12141c 72%)',
+  retro:
+    'repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.028) 0 2px, transparent 2px 5px),' +
+    'radial-gradient(52vw 42vh at 50% 44%, rgba(226, 92, 158, 0.3), transparent 66%),' +
+    'radial-gradient(30vw 24vh at 78% 22%, rgba(94, 200, 190, 0.18), transparent 62%),' +
+    'linear-gradient(180deg, #251a34 0%, #14101a 78%)',
+  settings:
+    'radial-gradient(62vw 46vh at 50% 18%, rgba(143, 191, 209, 0.16), transparent 66%),' +
+    'linear-gradient(180deg, #1a1e24 0%, #101216 82%)'
+};
+
+var Ambient = (function () {
+  var root = document.getElementById('ambient');
+  var layers = [el('div', 'amb-layer'), el('div', 'amb-layer')];
+  layers.forEach(function (l) { root.appendChild(l); });
+  root.appendChild(el('div', 'amb-vignette'));
+  root.appendChild(el('div', 'amb-dim'));
+  var active = 0;
+  var currentKey = null;
+
+  function show(key) {
+    if (key === currentKey || !HEROES[key]) return;
+    currentKey = key;
+    active = 1 - active;
+    layers[active].style.background = HEROES[key];
+    layers[active].classList.add('visible');
+    layers[1 - active].classList.remove('visible');
+  }
+  return { show: show };
+})();
+
+// ============================================================================
 // Demo-indhold (kun til at vise stilen)
 // ============================================================================
 
@@ -462,34 +494,6 @@ var RETRO = [
   { name: 'MS-DOS Games', desc: 'Tusindvis af DOS-spil' },
   { name: 'itch.io', desc: 'Gratis indie- og retrospil' }
 ];
-
-// ============================================================================
-// Levende baggrund med parallakse
-// ============================================================================
-
-var Ambient = (function () {
-  var root = document.getElementById('ambient');
-  var layers = [el('div', 'amb-layer'), el('div', 'amb-layer')];
-  layers.forEach(function (l) { root.appendChild(l); });
-  var active = 0;
-
-  function next() {
-    var pick = PHOTOS[Math.floor(Math.random() * PHOTOS.length)];
-    active = 1 - active;
-    layers[active].style.background = pick.scene.bg;
-    layers[active].classList.add('visible');
-    layers[1 - active].classList.remove('visible');
-  }
-  function parallax(index, count) {
-    var shift = (index - (count - 1) / 2) * 0.5; // -1..1 vw ca.
-    layers.forEach(function (l) {
-      l.style.transform = 'translateX(' + (-shift) + 'vw) scale(1.05)';
-    });
-  }
-  next();
-  setInterval(next, 14000);
-  return { parallax: parallax };
-})();
 
 // ============================================================================
 // Fokus-gitter
@@ -566,14 +570,19 @@ var Screens = {
     var screen = this.stack.pop();
     if (screen) screen.el.classList.remove('active');
     var top = this.top();
-    if (top) top.el.classList.add('active');
+    if (top) {
+      top.el.classList.add('active');
+      if (top.resume) top.resume();
+    }
     this.refresh();
   },
   top: function () { return this.stack[this.stack.length - 1] || null; },
   refresh: function () {
     var top = this.top();
     setHints(top && top.hints ? top.hints() : []);
-    document.body.classList.toggle('on-home', top === homeScreen);
+    var onHome = top === homeScreen;
+    document.body.classList.toggle('on-home', onHome);
+    document.body.classList.toggle('in-section', !onHome);
   },
   handle: function (action) {
     var top = this.top();
@@ -592,7 +601,7 @@ function makeScreen(id, build) {
 }
 
 // ============================================================================
-// Hjem: hilsen + navigations-rail
+// Hjem: fuldskaerms hero + pille-navigation
 // ============================================================================
 
 var MENU = [
@@ -605,9 +614,9 @@ var MENU = [
 
 function greetingText() {
   var h = new Date().getHours();
-  if (h >= 5 && h < 10) return 'Godmorgen.';
-  if (h >= 10 && h < 18) return 'Goddag.';
-  return 'Godaften.';
+  if (h >= 5 && h < 10) return 'Godmorgen';
+  if (h >= 10 && h < 18) return 'Goddag';
+  return 'Godaften';
 }
 
 function dateText() {
@@ -616,10 +625,14 @@ function dateText() {
 }
 
 var homeScreen = makeScreen('home', function (screen, root) {
-  var greet = el('div', 'greeting');
-  greet.appendChild(el('div', 'hello', greetingText()));
-  greet.appendChild(el('div', 'date', dateText()));
-  root.appendChild(greet);
+  var hero = el('div', 'hero');
+  var eyebrow = el('div', 'eyebrow', greetingText() + ' · ' + dateText());
+  var heroTitle = el('div', 'hero-title');
+  var heroDesc = el('div', 'hero-desc');
+  hero.appendChild(eyebrow);
+  hero.appendChild(heroTitle);
+  hero.appendChild(heroDesc);
+  root.appendChild(hero);
 
   var rail = el('div', 'rail');
   root.appendChild(rail);
@@ -629,19 +642,24 @@ var homeScreen = makeScreen('home', function (screen, root) {
     var card = el('div', 'card');
     card.dataset.target = m.id;
     card.appendChild(icon(m.icon));
-    var chip = el('div', 'open-chip');
-    chip.appendChild(el('span', 'btn btn-a', 'A'));
-    chip.appendChild(el('span', null, 'Åbn'));
-    card.appendChild(chip);
     card.appendChild(el('div', 'label', m.label));
-    card.appendChild(el('div', 'desc', m.desc));
     rail.appendChild(card);
     return card;
   });
   focus.setItems(cards);
 
-  function applyParallax() { Ambient.parallax(focus.index, MENU.length); }
-  applyParallax();
+  function syncHero(animate) {
+    var m = MENU[focus.index];
+    heroTitle.textContent = m.label;
+    heroDesc.textContent = m.desc;
+    Ambient.show(m.id);
+    if (animate) {
+      hero.classList.remove('swap');
+      void hero.offsetWidth; // genstart animationen
+      hero.classList.add('swap');
+    }
+  }
+  syncHero(false);
 
   function openTarget(target) {
     if (target === 'photos') Screens.push(photosScreen);
@@ -652,14 +670,15 @@ var homeScreen = makeScreen('home', function (screen, root) {
   }
 
   cards.forEach(function (card) {
-    tapToFocus(focus, card, function () { openTarget(card.dataset.target); }, applyParallax);
+    tapToFocus(focus, card, function () { openTarget(card.dataset.target); }, function () { syncHero(true); });
   });
 
-  screen.enter = function () { focus.applyFocus(false); applyParallax(); };
+  screen.enter = function () { focus.applyFocus(false); syncHero(false); };
+  screen.resume = function () { syncHero(false); };
   screen.hints = function () { return [['A', 'Åbn'], ['✚', 'Navigér']]; };
   screen.onInput = function (action) {
-    if (action === 'left' || action === 'up') { focus.move('left'); applyParallax(); }
-    else if (action === 'right' || action === 'down') { focus.move('right'); applyParallax(); }
+    if (action === 'left' || action === 'up') { if (focus.move('left')) syncHero(true); }
+    else if (action === 'right' || action === 'down') { if (focus.move('right')) syncHero(true); }
     else if (action === 'a') {
       openTarget(focus.current && focus.current.dataset.target);
     }
@@ -667,7 +686,7 @@ var homeScreen = makeScreen('home', function (screen, root) {
 });
 
 // ============================================================================
-// Sektionssider (viser stil + grid-navigation, ingen funktion)
+// Sektionssider (indhold i fuld skaerm over sektionens hero-baggrund)
 // ============================================================================
 
 function conceptToast() {
@@ -697,7 +716,7 @@ function makeSection(id, title, subtitle, cols, buildTiles) {
       tapToFocus(focus, tile, conceptToast);
     });
 
-    screen.enter = function () { focus.index = 0; focus.applyFocus(false); };
+    screen.enter = function () { focus.index = 0; focus.applyFocus(false); Ambient.show(id); };
     screen.hints = function () { return [['A', 'Åbn'], ['B', 'Hjem'], ['✚', 'Navigér']]; };
     screen.onInput = function (action) {
       if (['up', 'down', 'left', 'right'].indexOf(action) !== -1) focus.move(action);
