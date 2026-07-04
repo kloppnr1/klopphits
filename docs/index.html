@@ -59,6 +59,11 @@
   }
   #ambient .amb-layer.visible { opacity: 1; }
   #ambient .amb-layer svg { width: 100%; height: 100%; display: block; }
+  #ambient .amb-layer .hero-img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
   @keyframes slowZoom {
     from { transform: scale(1); }
     to { transform: scale(1.07); }
@@ -218,6 +223,11 @@
   }
 
   .tile.steam-tile { aspect-ratio: 2 / 3; }
+  .tile.steam-tile img.cover {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
   .tile.steam-tile .fallback {
     position: absolute; inset: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -555,6 +565,12 @@ var HEROES = {
     '</svg>'
 };
 
+// Live artwork fra Steams offentlige CDN (falder tilbage til SVG-scenen
+// hvis billedet ikke kan hentes, fx offline eller blokeret netvaerk).
+var STEAM_CDN = 'https://cdn.cloudflare.steamstatic.com/steam/apps/';
+function steamHeroUrl(appid) { return STEAM_CDN + appid + '/library_hero.jpg'; }
+function steamCoverUrl(appid) { return STEAM_CDN + appid + '/library_600x900.jpg'; }
+
 var Ambient = (function () {
   var root = document.getElementById('ambient');
   var layers = [el('div', 'amb-layer'), el('div', 'amb-layer')];
@@ -564,12 +580,23 @@ var Ambient = (function () {
   var active = 0;
   var currentKey = null;
 
-  function show(key) {
-    if (key === currentKey || !HEROES[key]) return;
+  // spec: { svg: SVG-fallback, img: valgfri billed-URL (fx Steam hero) }
+  function show(key, spec) {
+    if (key === currentKey || !spec) return;
     currentKey = key;
     active = 1 - active;
-    layers[active].innerHTML = HEROES[key];
-    layers[active].classList.add('visible');
+    var layer = layers[active];
+    layer.innerHTML = spec.svg || '';
+    if (spec.img) {
+      var im = new Image();
+      im.className = 'hero-img';
+      im.alt = '';
+      im.onload = function () {
+        if (currentKey === key) layer.appendChild(im);
+      };
+      im.src = spec.img; // ved fejl beholdes SVG-scenen
+    }
+    layer.classList.add('visible');
     layers[1 - active].classList.remove('visible');
   }
   return { show: show };
@@ -598,8 +625,18 @@ var VIDEOS = [
   ['Julemorgen.mp4', '4:25', scene(0, 350, '🎄')]
 ].map(function (v) { return { name: v[0], dur: v[1], scene: v[2] }; });
 
-var STEAM = ['Hollow Knight', 'Rocket League', 'Stardew Valley', 'Portal 2', 'Celeste',
-  'Hades', 'DOOM Eternal', 'Forza Horizon 5', 'Cuphead', 'It Takes Two'];
+var STEAM = [
+  { name: 'Overcooked', appid: 448510 },
+  { name: 'Overcooked! 2', appid: 728880 },
+  { name: 'Hollow Knight', appid: 367520 },
+  { name: 'Rocket League', appid: 252950 },
+  { name: 'Stardew Valley', appid: 413150 },
+  { name: 'Portal 2', appid: 620 },
+  { name: 'Celeste', appid: 504230 },
+  { name: 'Hades', appid: 1145360 },
+  { name: 'Cuphead', appid: 268910 },
+  { name: 'It Takes Two', appid: 1426210 }
+];
 
 var RETRO = [
   { name: 'Internet Arcade', desc: 'Klassiske arkadespil i browseren' },
@@ -720,7 +757,7 @@ function makeScreen(id, build) {
 var MENU = [
   { id: 'photos', icon: 'photos', label: 'Billeder', desc: 'Dine private billeder i fuld skærm — med diasshow.' },
   { id: 'videos', icon: 'videos', label: 'Videoklip', desc: 'Familiens videoklip, klar til afspilning.' },
-  { id: 'steam', icon: 'steam', label: 'Steam', desc: 'Dine installerede spil — tryk A og spil.' },
+  { id: 'steam', icon: 'steam', label: 'Steam', desc: 'Dine installerede spil — fremhævet: Overcooked.' },
   { id: 'retro', icon: 'retro', label: 'Retro spil', desc: 'Online klassikere fra arkaden og konsollen.' },
   { id: 'settings', icon: 'settings', label: 'Indstillinger', desc: 'Mapper, kilder og program.' }
 ];
@@ -765,7 +802,10 @@ var homeScreen = makeScreen('home', function (screen, root) {
     var m = MENU[focus.index];
     heroTitle.textContent = m.label;
     heroDesc.textContent = m.desc;
-    Ambient.show(m.id);
+    Ambient.show(m.id, {
+      svg: HEROES[m.id],
+      img: m.id === 'steam' ? steamHeroUrl(STEAM[0].appid) : undefined
+    });
     if (animate) {
       hero.classList.remove('swap');
       void hero.offsetWidth; // genstart animationen
@@ -806,7 +846,7 @@ function conceptToast() {
   toast('Koncept — kun stil og navigation');
 }
 
-function makeSection(id, title, subtitle, cols, buildTiles) {
+function makeSection(id, title, subtitle, cols, buildTiles, onFocusChange) {
   return makeScreen(id, function (screen, root) {
     var back = el('div', 'back-pill');
     back.appendChild(el('span', null, '‹'));
@@ -825,14 +865,22 @@ function makeSection(id, title, subtitle, cols, buildTiles) {
     var focus = new Grid(cols);
     var tiles = buildTiles(grid);
     focus.setItems(tiles);
+
+    function focusChanged() {
+      if (onFocusChange) onFocusChange(focus.index);
+      else Ambient.show(id, { svg: HEROES[id] });
+    }
+
     tiles.forEach(function (tile) {
-      tapToFocus(focus, tile, conceptToast);
+      tapToFocus(focus, tile, conceptToast, focusChanged);
     });
 
-    screen.enter = function () { focus.index = 0; focus.applyFocus(false); Ambient.show(id); };
+    screen.enter = function () { focus.index = 0; focus.applyFocus(false); focusChanged(); };
     screen.hints = function () { return [['A', 'Åbn'], ['B', 'Hjem'], ['✚', 'Navigér']]; };
     screen.onInput = function (action) {
-      if (['up', 'down', 'left', 'right'].indexOf(action) !== -1) focus.move(action);
+      if (['up', 'down', 'left', 'right'].indexOf(action) !== -1) {
+        if (focus.move(action)) focusChanged();
+      }
       else if (action === 'a') conceptToast();
       else if (action === 'b') Screens.pop();
     };
@@ -864,16 +912,25 @@ var videosScreen = makeSection('videos', 'Videoklip', VIDEOS.length + ' filer ·
   });
 });
 
-var steamScreen = makeSection('steam', 'Steam', STEAM.length + ' installerede spil', 5, function (grid) {
-  return STEAM.map(function (name) {
+var steamScreen = makeSection('steam', 'Steam', STEAM.length + ' installerede spil · live artwork fra Steam', 5, function (grid) {
+  return STEAM.map(function (game) {
     var tile = el('div', 'tile steam-tile');
     var fb = el('div', 'fallback');
-    fb.appendChild(el('div', 'big-letter', name.charAt(0)));
-    fb.appendChild(el('div', 'name', name));
+    fb.appendChild(el('div', 'big-letter', game.name.charAt(0)));
+    fb.appendChild(el('div', 'name', game.name));
     tile.appendChild(fb);
+    var cover = el('img', 'cover');
+    cover.alt = game.name;
+    cover.loading = 'lazy';
+    cover.addEventListener('error', function () { cover.remove(); });
+    cover.src = steamCoverUrl(game.appid);
+    tile.appendChild(cover);
     grid.appendChild(tile);
     return tile;
   });
+}, function (index) {
+  var game = STEAM[index];
+  Ambient.show('steam:' + game.appid, { svg: HEROES.steam, img: steamHeroUrl(game.appid) });
 });
 
 var retroScreen = makeSection('retro', 'Retro spil', 'Online retro-spil i fuld skærm', 2, function (grid) {
