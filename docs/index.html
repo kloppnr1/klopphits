@@ -58,6 +58,7 @@
     animation: slowZoom 36s ease-in-out infinite alternate;
   }
   #ambient .amb-layer.visible { opacity: 1; }
+  #ambient .amb-layer svg { width: 100%; height: 100%; display: block; }
   @keyframes slowZoom {
     from { transform: scale(1); }
     to { transform: scale(1.07); }
@@ -419,27 +420,139 @@ function scene(hue1, hue2, emoji) {
 // Hero-scener pr. sektion (i den rigtige app: dine billeder & Steam-covers)
 // ============================================================================
 
+// Haandbyggede SVG-scener, 1920x1080, beskaeres med "slice" som et foto.
+
+var SVG_OPEN = '<svg viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">';
+
+function stars(seedX, count, yMax, color) {
+  var out = '';
+  for (var i = 0; i < count; i++) {
+    var x = ((seedX + i * 379) % 1900) + 10;
+    var y = ((i * 233 + seedX * 7) % yMax) + 20;
+    var r = 1 + (i % 3);
+    var o = 0.35 + ((i * 17) % 50) / 100;
+    out += '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="' + color + '" opacity="' + o + '"/>';
+  }
+  return out;
+}
+
 var HEROES = {
-  photos:
-    'radial-gradient(58vw 42vh at 72% 28%, rgba(255, 186, 116, 0.5), transparent 62%),' +
-    'radial-gradient(90vw 30vh at 50% 78%, rgba(80, 52, 38, 0.55), transparent 70%),' +
-    'linear-gradient(165deg, #6e4426 0%, #33231d 55%, #14161a 100%)',
-  videos:
-    'radial-gradient(52vw 38vh at 26% 24%, rgba(138, 188, 228, 0.4), transparent 62%),' +
-    'radial-gradient(40vw 30vh at 80% 70%, rgba(60, 96, 130, 0.35), transparent 65%),' +
-    'linear-gradient(200deg, #27455e 0%, #17222d 55%, #101216 100%)',
-  steam:
-    'radial-gradient(46vw 46vh at 74% 58%, rgba(116, 88, 214, 0.36), transparent 62%),' +
-    'radial-gradient(32vw 32vh at 20% 22%, rgba(76, 156, 214, 0.3), transparent 62%),' +
-    'linear-gradient(180deg, #1d2233 0%, #12141c 72%)',
-  retro:
-    'repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.028) 0 2px, transparent 2px 5px),' +
-    'radial-gradient(52vw 42vh at 50% 44%, rgba(226, 92, 158, 0.3), transparent 66%),' +
-    'radial-gradient(30vw 24vh at 78% 22%, rgba(94, 200, 190, 0.18), transparent 62%),' +
-    'linear-gradient(180deg, #251a34 0%, #14101a 78%)',
-  settings:
-    'radial-gradient(62vw 46vh at 50% 18%, rgba(143, 191, 209, 0.16), transparent 66%),' +
-    'linear-gradient(180deg, #1a1e24 0%, #101216 82%)'
+
+  // Nordisk fjord i solnedgang
+  photos: SVG_OPEN +
+    '<defs>' +
+    '<linearGradient id="ph-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#33204d"/><stop offset="0.45" stop-color="#96462e"/><stop offset="0.72" stop-color="#eba75f"/></linearGradient>' +
+    '<radialGradient id="ph-glow"><stop offset="0" stop-color="#ffe9c4"/><stop offset="0.3" stop-color="#ffcf8a" stop-opacity="0.8"/><stop offset="1" stop-color="#ffcf8a" stop-opacity="0"/></radialGradient>' +
+    '<linearGradient id="ph-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d98a4f"/><stop offset="1" stop-color="#1c1220"/></linearGradient>' +
+    '</defs>' +
+    '<rect width="1920" height="760" fill="url(#ph-sky)"/>' +
+    '<circle cx="1250" cy="640" r="340" fill="url(#ph-glow)"/>' +
+    '<circle cx="1250" cy="640" r="84" fill="#ffe2ad"/>' +
+    '<polygon points="0,760 0,520 190,600 390,470 560,590 760,500 900,620 1050,560 1200,660 1500,590 1920,640 1920,760" fill="#54314a" opacity="0.85"/>' +
+    '<polygon points="0,760 0,620 240,665 480,585 700,680 950,625 1180,700 1450,645 1700,710 1920,665 1920,760" fill="#37223a"/>' +
+    '<rect y="760" width="1920" height="320" fill="url(#ph-sea)"/>' +
+    '<rect x="1140" y="760" width="220" height="320" fill="#ffcf8a" opacity="0.15"/>' +
+    '<rect x="1090" y="800" width="330" height="6" rx="3" fill="#ffd9a0" opacity="0.35"/>' +
+    '<rect x="1140" y="850" width="220" height="5" rx="2.5" fill="#ffd9a0" opacity="0.28"/>' +
+    '<rect x="1170" y="905" width="160" height="4" rx="2" fill="#ffd9a0" opacity="0.2"/>' +
+    '<polygon points="0,1080 0,905 300,985 520,935 760,1015 1200,960 1920,1000 1920,1080" fill="#120e16"/>' +
+    '<path d="M480 300 q18 -16 36 0 q18 -16 36 0" stroke="#2c1a2e" stroke-width="6" fill="none" stroke-linecap="round"/>' +
+    '<path d="M600 350 q14 -13 28 0 q14 -13 28 0" stroke="#2c1a2e" stroke-width="5" fill="none" stroke-linecap="round"/>' +
+    '</svg>',
+
+  // Blaa time: maane over havet
+  videos: SVG_OPEN +
+    '<defs>' +
+    '<linearGradient id="vi-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1120"/><stop offset="0.75" stop-color="#1d3a55"/></linearGradient>' +
+    '<radialGradient id="vi-mglow"><stop offset="0" stop-color="#dcecf8" stop-opacity="0.9"/><stop offset="0.25" stop-color="#bcd8ee" stop-opacity="0.4"/><stop offset="1" stop-color="#bcd8ee" stop-opacity="0"/></radialGradient>' +
+    '<linearGradient id="vi-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#25506e"/><stop offset="1" stop-color="#0b0f15"/></linearGradient>' +
+    '</defs>' +
+    '<rect width="1920" height="770" fill="url(#vi-sky)"/>' +
+    stars(101, 40, 500, '#cfe3f2') +
+    '<circle cx="560" cy="290" r="230" fill="url(#vi-mglow)"/>' +
+    '<circle cx="560" cy="290" r="72" fill="#e8f2fa"/>' +
+    '<circle cx="537" cy="272" r="12" fill="#c9dcEA" opacity="0.5"/>' +
+    '<circle cx="585" cy="308" r="8" fill="#c9dcea" opacity="0.45"/>' +
+    '<ellipse cx="300" cy="470" rx="260" ry="34" fill="#23415c" opacity="0.55"/>' +
+    '<ellipse cx="820" cy="520" rx="340" ry="30" fill="#1d3750" opacity="0.6"/>' +
+    '<ellipse cx="1520" cy="430" rx="300" ry="36" fill="#23415c" opacity="0.5"/>' +
+    '<rect y="770" width="1920" height="310" fill="url(#vi-sea)"/>' +
+    '<polygon points="1450,770 1650,700 1920,740 1920,770" fill="#101c29"/>' +
+    '<rect x="500" y="770" width="120" height="310" fill="#bcd8ee" opacity="0.12"/>' +
+    '<rect x="470" y="805" width="180" height="5" rx="2.5" fill="#cfe3f2" opacity="0.3"/>' +
+    '<rect x="495" y="855" width="130" height="4" rx="2" fill="#cfe3f2" opacity="0.24"/>' +
+    '<rect x="515" y="915" width="90" height="4" rx="2" fill="#cfe3f2" opacity="0.18"/>' +
+    '</svg>',
+
+  // Fremmed planet med ringe
+  steam: SVG_OPEN +
+    '<defs>' +
+    '<linearGradient id="st-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#100e1c"/><stop offset="1" stop-color="#1c2340"/></linearGradient>' +
+    '<radialGradient id="st-neb1"><stop offset="0" stop-color="#7458d6" stop-opacity="0.35"/><stop offset="1" stop-color="#7458d6" stop-opacity="0"/></radialGradient>' +
+    '<radialGradient id="st-neb2"><stop offset="0" stop-color="#4c9cd6" stop-opacity="0.28"/><stop offset="1" stop-color="#4c9cd6" stop-opacity="0"/></radialGradient>' +
+    '<linearGradient id="st-pl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9c86e2"/><stop offset="1" stop-color="#37325e"/></linearGradient>' +
+    '</defs>' +
+    '<rect width="1920" height="1080" fill="url(#st-sky)"/>' +
+    '<ellipse cx="480" cy="300" rx="460" ry="260" fill="url(#st-neb1)"/>' +
+    '<ellipse cx="1560" cy="200" rx="380" ry="220" fill="url(#st-neb2)"/>' +
+    stars(211, 60, 800, '#d8def0') +
+    '<ellipse cx="1440" cy="430" rx="305" ry="72" fill="none" stroke="#a99ae0" stroke-width="16" opacity="0.35" transform="rotate(-18 1440 430)"/>' +
+    '<circle cx="1440" cy="430" r="168" fill="url(#st-pl)"/>' +
+    '<ellipse cx="1440" cy="430" rx="305" ry="72" fill="none" stroke="#c3b7ee" stroke-width="7" opacity="0.6" transform="rotate(-18 1440 430)" stroke-dasharray="480 220"/>' +
+    '<circle cx="1160" cy="240" r="22" fill="#cfd6ea" opacity="0.85"/>' +
+    '<polygon points="0,1080 0,860 120,880 260,775 340,860 460,820 620,905 800,840 1000,925 1300,860 1560,940 1920,880 1920,1080" fill="#0d0b14"/>' +
+    '<polygon points="0,1080 0,960 300,1000 620,950 980,1020 1400,970 1920,1010 1920,1080" fill="#080711"/>' +
+    '</svg>',
+
+  // Synthwave: sol over neongrid
+  retro: SVG_OPEN +
+    '<defs>' +
+    '<linearGradient id="re-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17092b"/><stop offset="1" stop-color="#41125e"/></linearGradient>' +
+    '<linearGradient id="re-sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb45a"/><stop offset="1" stop-color="#ff3d8f"/></linearGradient>' +
+    '<radialGradient id="re-hglow"><stop offset="0" stop-color="#ff4dd2" stop-opacity="0.3"/><stop offset="1" stop-color="#ff4dd2" stop-opacity="0"/></radialGradient>' +
+    '<clipPath id="re-clip"><circle cx="960" cy="600" r="250"/></clipPath>' +
+    '</defs>' +
+    '<rect width="1920" height="660" fill="url(#re-sky)"/>' +
+    stars(307, 45, 420, '#e9d6f5') +
+    '<g clip-path="url(#re-clip)">' +
+    '<rect x="710" y="350" width="500" height="500" fill="url(#re-sun)"/>' +
+    '<rect x="710" y="592" width="500" height="10" fill="#17092b"/>' +
+    '<rect x="710" y="628" width="500" height="14" fill="#17092b"/>' +
+    '<rect x="710" y="672" width="500" height="20" fill="#17092b"/>' +
+    '<rect x="710" y="726" width="500" height="26" fill="#17092b"/>' +
+    '<rect x="710" y="792" width="500" height="34" fill="#17092b"/>' +
+    '</g>' +
+    '<rect y="660" width="1920" height="420" fill="#0d0716"/>' +
+    '<ellipse cx="960" cy="660" rx="760" ry="150" fill="url(#re-hglow)"/>' +
+    '<g stroke="#ff4dd2" stroke-width="3" opacity="0.55">' +
+    '<line x1="0" y1="668" x2="1920" y2="668"/><line x1="0" y1="682" x2="1920" y2="682"/>' +
+    '<line x1="0" y1="702" x2="1920" y2="702"/><line x1="0" y1="730" x2="1920" y2="730"/>' +
+    '<line x1="0" y1="768" x2="1920" y2="768"/><line x1="0" y1="820" x2="1920" y2="820"/>' +
+    '<line x1="0" y1="890" x2="1920" y2="890"/><line x1="0" y1="975" x2="1920" y2="975"/>' +
+    '<line x1="960" y1="660" x2="960" y2="1080"/><line x1="960" y1="660" x2="700" y2="1080"/>' +
+    '<line x1="960" y1="660" x2="440" y2="1080"/><line x1="960" y1="660" x2="180" y2="1080"/>' +
+    '<line x1="960" y1="660" x2="-80" y2="1080"/><line x1="960" y1="660" x2="-340" y2="1080"/>' +
+    '<line x1="960" y1="660" x2="1220" y2="1080"/><line x1="960" y1="660" x2="1480" y2="1080"/>' +
+    '<line x1="960" y1="660" x2="1740" y2="1080"/><line x1="960" y1="660" x2="2000" y2="1080"/>' +
+    '<line x1="960" y1="660" x2="2260" y2="1080"/>' +
+    '</g>' +
+    '</svg>',
+
+  // Nordlys over fjeldene
+  settings: SVG_OPEN +
+    '<defs>' +
+    '<linearGradient id="se-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a0f1c"/><stop offset="1" stop-color="#14202b"/></linearGradient>' +
+    '<linearGradient id="se-au1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4de3a0"/><stop offset="1" stop-color="#37b8c9"/></linearGradient>' +
+    '<filter id="se-blur" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="26"/></filter>' +
+    '</defs>' +
+    '<rect width="1920" height="1080" fill="url(#se-sky)"/>' +
+    stars(419, 55, 700, '#d7e6ec') +
+    '<path d="M-100 480 C 400 320, 800 540, 1200 380 S 1900 300, 2020 380" stroke="url(#se-au1)" stroke-width="130" fill="none" opacity="0.32" filter="url(#se-blur)"/>' +
+    '<path d="M-100 340 C 500 200, 900 420, 1350 260 S 1950 200, 2020 260" stroke="url(#se-au1)" stroke-width="80" fill="none" opacity="0.22" filter="url(#se-blur)"/>' +
+    '<path d="M-100 600 C 350 480, 750 660, 1150 520 S 1850 460, 2020 520" stroke="url(#se-au1)" stroke-width="50" fill="none" opacity="0.16" filter="url(#se-blur)"/>' +
+    '<polygon points="0,1080 0,840 260,900 480,790 720,890 980,820 1240,910 1520,840 1760,920 1920,880 1920,1080" fill="#0c1017"/>' +
+    '<polygon points="0,1080 0,950 340,1000 700,940 1100,1010 1500,960 1920,1000 1920,1080" fill="#070a0f"/>' +
+    '</svg>'
 };
 
 var Ambient = (function () {
@@ -455,7 +568,7 @@ var Ambient = (function () {
     if (key === currentKey || !HEROES[key]) return;
     currentKey = key;
     active = 1 - active;
-    layers[active].style.background = HEROES[key];
+    layers[active].innerHTML = HEROES[key];
     layers[active].classList.add('visible');
     layers[1 - active].classList.remove('visible');
   }
