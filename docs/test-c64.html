@@ -46,6 +46,13 @@
   body.m-blur #vidbg { display: block; }
   body.m-pixel #cnv, body.m-scan #cnv, body.m-crt #cnv { display: block; image-rendering: pixelated; }
   body.m-crt #cnv { filter: contrast(1.12) saturate(1.22) brightness(1.02); }
+  /* Kildevideoen skal forblive renderet (usynlig) i canvas-tilstandene,
+     ellers stopper Chrome med at levere nye frames til drawImage */
+  body.m-pixel #vid, body.m-scan #vid, body.m-crt #vid {
+    display: block;
+    opacity: 0;
+    pointer-events: none;
+  }
 
   /* Scanlines + vignet (over hele scenen; usynlige over sorte bjaelker) */
   #scan {
@@ -166,18 +173,15 @@ vid.addEventListener('loadedmetadata', function () {
   statusEl.textContent = 'Kilde: ' + vid.videoWidth + '×' + vid.videoHeight + ' · archive.org';
 });
 
-// Canvas-tegneloekke (pixel-tilstandene)
+// Canvas-tegneloekke (pixel-tilstandene).
+// Bruger requestAnimationFrame - requestVideoFrameCallback holder op med
+// at fyre, naar videoelementet ikke er synligt renderet.
 function draw() {
-  if (document.body.className.indexOf('m-pixel') !== -1 ||
-      document.body.className.indexOf('m-scan') !== -1 ||
-      document.body.className.indexOf('m-crt') !== -1) {
+  var m = document.body.className;
+  if (m === 'm-pixel' || m === 'm-scan' || m === 'm-crt') {
     if (vid.videoWidth) ctx.drawImage(vid, 0, 0, cnv.width, cnv.height);
   }
-  if (vid.requestVideoFrameCallback) {
-    vid.requestVideoFrameCallback(draw);
-  } else {
-    requestAnimationFrame(draw);
-  }
+  requestAnimationFrame(draw);
 }
 draw();
 
