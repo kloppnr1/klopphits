@@ -121,8 +121,9 @@
     transition: opacity 0.45s ease;
   }
   body.in-section #ambient .amb-dim { opacity: 1; }
-  /* I video-sektionen er selve forhaandsvisningen stjernen - naesten ingen daempning */
-  body[data-screen="videos"] #ambient .amb-dim { opacity: 0.22; }
+  /* Hvor forhaandsvisningen er stjernen: naesten ingen daempning */
+  body[data-screen="videos"] #ambient .amb-dim,
+  body[data-screen="retro"] #ambient .amb-dim { opacity: 0.22; }
 
   #app { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
 
@@ -591,13 +592,20 @@ var Ambient = (function () {
       v.setAttribute('autoplay', '');
       v.setAttribute('playsinline', '');
       v.addEventListener('playing', function () { v.classList.add('on'); });
-      // Afspil een gang og fald roligt tilbage til stillbilledet (ingen loop)
-      v.addEventListener('ended', function () {
+      // Afspil een gang (eller til preview-loftet) og fald roligt tilbage
+      function endPreview() {
         v.classList.remove('on');
         setTimeout(function () { v.remove(); }, 900);
-      });
+      }
+      v.addEventListener('ended', endPreview);
+      if (spec.videoMax) {
+        var startAt = spec.videoStart || 0;
+        v.addEventListener('timeupdate', function () {
+          if (v.currentTime - startAt >= spec.videoMax) endPreview();
+        });
+      }
       v.addEventListener('error', function () { v.remove(); }); // stillbilledet bliver staaende
-      v.src = spec.video;
+      v.src = spec.videoStart ? spec.video + '#t=' + spec.videoStart : spec.video;
       layer.appendChild(v);
       if (v.play) v.play().catch(function () {});
     }
@@ -751,12 +759,20 @@ var STEAM = [
   { name: 'It Takes Two', appid: 1426210 }
 ];
 
-var RETRO = [
-  { name: 'Internet Arcade', desc: 'Klassiske arkadespil i browseren', scene: scene(286, 320, '🕹️') },
-  { name: 'Console Living Room', desc: 'Retro konsolspil fra 70’erne og 80’erne', scene: scene(262, 300, '📺') },
-  { name: 'MS-DOS Games', desc: 'Tusindvis af DOS-spil', scene: scene(214, 252, '💾') },
-  { name: 'itch.io', desc: 'Gratis indie- og retrospil', scene: scene(322, 356, '👾') }
-];
+// C64-longplays: fan-optagede gennemspilninger, distribueret via
+// Archive.org (World of Longplays / MadMatty). Streames direkte;
+// previews starter et stykke inde og stopper efter 15 sekunder.
+var LONGPLAY_BASE = 'https://archive.org/download/commodore64longplaysvarious/';
+var LONGPLAYS = [
+  { name: 'Commando', sub: 'Elite, 1985', file: 'Commodore_64_Longplay_Commando_EU.mp4', start: 95, scene: scene(20, 350, '🪖') },
+  { name: 'Cybernoid', sub: 'Hewson, 1988', file: 'Commodore_64_Longplay_Cybernoid_EU.mp4', start: 80, scene: scene(280, 230, '🚀') },
+  { name: 'Bionic Commando', sub: 'Capcom, 1988', file: 'Commodore_64_Longplay_Bionic_Commando_EU.mp4', start: 90, scene: scene(120, 90, '🦾') },
+  { name: 'Lightforce', sub: 'FTL, 1986', file: 'Commodore_64_Longplay_Lightforce_EU.mp4', start: 70, scene: scene(210, 260, '🛸') },
+  { name: 'Cybernoid II', sub: 'Hewson, 1988', file: 'Commodore_64_Longplay_Cybernoid_II_EU.mp4', start: 85, scene: scene(320, 280, '🛰️') }
+].map(function (g) {
+  g.url = LONGPLAY_BASE + g.file;
+  return g;
+});
 
 // ============================================================================
 // Fokus-gitter
@@ -870,7 +886,7 @@ function makeScreen(id, build) {
 var MENU = [
   { id: 'videos', icon: 'videos', label: 'Videoklip', desc: 'Familiens videoklip, klar til afspilning.' },
   { id: 'steam', icon: 'steam', label: 'Steam', desc: 'Hele dit spilbibliotek, klar til start.' },
-  { id: 'retro', icon: 'retro', label: 'Retro spil', desc: 'Online klassikere fra arkaden og konsollen.' }
+  { id: 'retro', icon: 'retro', label: 'Retro spil', desc: 'C64-klassikere med levende gameplay-previews.' }
 ];
 
 var homeScreen = makeScreen('home', function (screen, root) {
@@ -907,13 +923,23 @@ var homeScreen = makeScreen('home', function (screen, root) {
       svg: HEROES[m.id],
       node: m.id === 'steam' ? makeCoverWall() : (m.id === 'retro' ? makeRetroWall() : undefined)
     });
-    // Hviler man paa Videoklip, starter en live-preview af foerste klip
+    // Hviler man paa Videoklip eller Retro, starter en live-preview
     clearTimeout(homeVideoTimer);
     if (m.id === 'videos') {
       // Preview afspiller een gang; naar den slutter, fader den tilbage
       // til sektionens eget symbolbillede (play-emblemet over havet)
       homeVideoTimer = setTimeout(function () {
         Ambient.show('videos-live', { svg: HEROES.videos, video: VIDEOS[0].url });
+      }, 700);
+    } else if (m.id === 'retro') {
+      // C64-gameplay oven paa covervaeggen, 15 sekunder, saa tilbage til vaeggen
+      homeVideoTimer = setTimeout(function () {
+        Ambient.show('retro-live', {
+          node: makeRetroWall(),
+          video: LONGPLAYS[0].url,
+          videoStart: LONGPLAYS[0].start,
+          videoMax: 15
+        });
       }, 700);
     }
     if (animate) {
@@ -1085,18 +1111,31 @@ var steamScreen = makeSection('steam', 'Steam', STEAM.length + ' installerede sp
   Ambient.show('steam:' + game.appid, { svg: HEROES.steam, img: steamHeroUrl(game.appid) });
 });
 
-var retroScreen = makeSection('retro', 'Retro spil', 'Online retro-spil i fuld skærm', 3, function (grid) {
-  return RETRO.map(function (site) {
+var retroPreviewTimer = null;
+var retroScreen = makeSection('retro', 'Retro spil', 'C64-longplays · World of Longplays / archive.org', 3, function (grid) {
+  return LONGPLAYS.map(function (g) {
     var tile = el('div', 'tile media-tile');
-    var ph = el('div', 'ph', site.scene.emoji);
-    ph.style.background = site.scene.bg;
+    var ph = el('div', 'ph', g.scene.emoji);
+    ph.style.background = g.scene.bg;
     tile.appendChild(ph);
-    var cap = el('div', 'caption', site.name);
-    cap.appendChild(el('span', 'cap-sub', site.desc));
+    var cap = el('div', 'caption', g.name);
+    cap.appendChild(el('span', 'cap-sub', g.sub));
     tile.appendChild(cap);
     grid.appendChild(tile);
     return tile;
   });
+}, function (index) {
+  clearTimeout(retroPreviewTimer);
+  var g = LONGPLAYS[index];
+  retroPreviewTimer = setTimeout(function () {
+    if (document.body.dataset.screen !== 'retro') return;
+    Ambient.show('retro:' + index, {
+      svg: sceneSvg(g.scene, 'r' + index),
+      video: g.url,
+      videoStart: g.start,
+      videoMax: 15
+    });
+  }, 450);
 });
 
 // ============================================================================
