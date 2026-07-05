@@ -106,16 +106,6 @@
     width: 100%; height: 100%;
   }
   .cover-wall.retro-wall { background: #0a0612; }
-  /* Frilagte hardware-fotos: maskinen svaever paa den moerke vaeg */
-  .cover-wall .cw canvas {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    object-fit: contain;
-    padding: 0.5rem;
-    opacity: 0;
-    transition: opacity 0.5s ease;
-  }
-  .cover-wall .cw canvas.on { opacity: 1; }
   @keyframes slowZoom {
     from { transform: scale(1); }
     to { transform: scale(1.07); }
@@ -703,89 +693,25 @@ function retroCoverSvg(g) {
 // Aegte retro-hardware: public domain-fotos (Evan Amos / Vanamo Online
 // Game Museum) hotlinket fra Wikimedia Commons. De haandtegnede covers
 // er fallback pr. celle, hvis et foto ikke kan hentes.
-// Direkte thumb-URL'er (upload.wikimedia.org sender CORS-headere;
-// Special:FilePath-omdirigeringen goer ikke, og saa fejler frilaegningen)
-var RETRO_HARDWARE = [
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Commodore-64-Computer-FL.jpg/640px-Commodore-64-Computer-FL.jpg',
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Atari-2600-Wood-4Sw-Set.jpg/640px-Atari-2600-Wood-4Sw-Set.jpg',
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/NES-Console-Set.jpg/640px-NES-Console-Set.jpg',
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/SNES-Mod1-Console-Set.jpg/640px-SNES-Mod1-Console-Set.jpg',
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Sega-Mega-Drive-JP-Mk1-Console-Set.jpg/640px-Sega-Mega-Drive-JP-Mk1-Console-Set.jpg',
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Vectrex-Console-Set.jpg/640px-Vectrex-Console-Set.jpg',
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Intellivision-Console-Set.jpg/640px-Intellivision-Console-Set.jpg',
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Magnavox-Odyssey-Console-Set.jpg/640px-Magnavox-Odyssey-Console-Set.jpg',
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Commodore-VIC-20-FL.jpg/640px-Commodore-VIC-20-FL.jpg',
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Atari-800-Computer-FL.jpg/640px-Atari-800-Computer-FL.jpg'
-];
-
-// Frilaegger et produktfoto paa hvid baggrund: flood-fill fra kanterne
-// goer baggrunden gennemsigtig (skygger bliver bloede, moerke sloer),
-// mens hvide detaljer PAA maskinen bevares. Kraever CORS - Wikimedia
-// sender Access-Control-Allow-Origin: *.
-function cutoutWhite(img) {
-  try {
-    var W = img.naturalWidth, H = img.naturalHeight;
-    var c = document.createElement('canvas');
-    c.width = W;
-    c.height = H;
-    var ctx = c.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-    var data = ctx.getImageData(0, 0, W, H);
-    var px = data.data;
-    var THR = 190;
-    var visited = new Uint8Array(W * H);
-    var stack = [];
-    function tryPush(x, y) {
-      if (x < 0 || y < 0 || x >= W || y >= H) return;
-      var i = y * W + x;
-      if (visited[i]) return;
-      var o = i * 4;
-      if (Math.min(px[o], px[o + 1], px[o + 2]) > THR) {
-        visited[i] = 1;
-        stack.push(i);
-      }
-    }
-    for (var x = 0; x < W; x++) { tryPush(x, 0); tryPush(x, H - 1); }
-    for (var y = 0; y < H; y++) { tryPush(0, y); tryPush(W - 1, y); }
-    while (stack.length) {
-      var i = stack.pop();
-      var o = i * 4;
-      var m = Math.min(px[o], px[o + 1], px[o + 2]);
-      px[o] = 0;
-      px[o + 1] = 0;
-      px[o + 2] = 0;
-      px[o + 3] = Math.max(0, 255 - m);
-      var cx = i % W;
-      var cy = (i - cx) / W;
-      tryPush(cx - 1, cy);
-      tryPush(cx + 1, cy);
-      tryPush(cx, cy - 1);
-      tryPush(cx, cy + 1);
-    }
-    ctx.putImageData(data, 0, 0);
-    return c;
-  } catch (e) {
-    return null; // CORS-fejl mv. -> behold det tegnede fallback-cover
-  }
+// Aegte C64-spilcovers fra coverbrowser.com (fuld-blods box art,
+// passer direkte i 2:3-cellerne). De tegnede covers er fallback.
+function c64CoverUrl(n) {
+  return 'https://www.coverbrowser.com/image/c64-games/' + n + '-1.jpg';
 }
+var RETRO_COVERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 function makeRetroWall() {
   var wall = el('div', 'cover-wall retro-wall');
   RETRO_WALL.forEach(function (g, i) {
     var cell = el('div', 'cw');
     cell.innerHTML = retroCoverSvg(g);
-    if (RETRO_HARDWARE[i]) {
-      var img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = function () {
-        var cnv = cutoutWhite(img);
-        if (cnv) {
-          cell.innerHTML = '';
-          cell.appendChild(cnv);
-          requestAnimationFrame(function () { cnv.classList.add('on'); });
-        }
-      };
-      img.src = RETRO_HARDWARE[i];
+    if (RETRO_COVERS[i] !== undefined) {
+      var img = el('img');
+      img.alt = '';
+      img.addEventListener('load', function () { img.classList.add('on'); });
+      img.addEventListener('error', function () { img.remove(); });
+      img.src = c64CoverUrl(RETRO_COVERS[i]);
+      cell.appendChild(img);
     }
     wall.appendChild(cell);
   });
