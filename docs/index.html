@@ -158,24 +158,25 @@
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    gap: clamp(3rem, 7.2vw, 7.2rem);
-    padding-top: calc(9vh + var(--safe-y));
-    padding-left: calc(3vw + var(--safe-x));
-    padding-right: calc(3vw + var(--safe-x));
+    padding-top: calc(6vh + var(--safe-y));
   }
+  /* Plakaten (cover/titel/knap) er taget ud af flex-floedet og sat fast
+     i venstre side, saa videoen alene kan staa centreret paa skaermen -
+     ikke centreret som et par sammen med plakaten */
   #ambient .amb-layer .amb-split .amb-split-poster {
-    flex: 0 0 auto;
+    position: absolute;
+    top: calc(6vh + var(--safe-y));
+    left: calc(3vw + var(--safe-x));
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     gap: 1.9rem;
   }
-  /* Cover og skaerm-panel deler samme hoejde og topkant, saa de to kort
-     staar paent paa linje i stedet for at svaeve forskudt af hinanden.
-     Der er masser af luft paa skaermen, saa begge er gjort meget store */
+  /* Coverets hoejde er sat, saa cover + tekst + knap TILSAMMEN faar
+     samme hoejde som videoen ved siden af - ikke coveret alene */
   #ambient .amb-layer .amb-split .amb-split-poster .art-fg {
     position: static;
-    height: 64vh;
+    height: calc(70vh - 11.8rem);
     width: auto;
     aspect-ratio: 2 / 3;
     object-fit: contain;
@@ -187,19 +188,20 @@
   }
   #ambient .amb-layer .amb-split .amb-caption {
     position: static;
-    max-width: 32vh;
-    text-align: center;
+    max-width: 26vh;
+    text-align: left;
     text-shadow: none;
   }
   #ambient .amb-layer .amb-split .amb-caption .amb-caption-title { font-size: 2.9rem; }
   #ambient .amb-layer .amb-split .amb-caption .amb-caption-sub { font-size: 1.4rem; margin-top: 0.5rem; }
   #ambient .amb-layer .amb-split .amb-split-screen { flex: 0 0 auto; }
-  /* CRT-rammen droppet for split-layoutet - rent skaermpanel i stedet,
-     samme hoejde som coveret ved siden af. Altid synligt (ikke afhaengigt
-     af 'on'), saa loadeskaermen indeni kan ses foer videoen er klar */
+  /* CRT-rammen droppet for split-layoutet - rent skaermpanel i stedet.
+     Videoen er den centrerede hovedgenstand paa siden og er gjort stoerre
+     end plakaten. Altid synligt (ikke afhaengigt af 'on'), saa
+     loadeskaermen indeni kan ses foer videoen er klar */
   #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen {
     position: relative;
-    height: 64vh;
+    height: 70vh;
     aspect-ratio: 4 / 3;
     background: #000;
     border-radius: 1rem;
