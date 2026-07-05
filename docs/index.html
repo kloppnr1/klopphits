@@ -80,6 +80,15 @@
     background: #7869c4;
     padding: 2rem;
   }
+  /* Loadeskaerm inde i selve skaermpanelet - vises til videoen er klar */
+  .c64-boot.pixel-loading {
+    z-index: 1;
+    display: flex;
+    padding: 0;
+    transition: opacity 0.4s ease;
+  }
+  .c64-boot.pixel-loading .c64-field { display: flex; align-items: center; justify-content: center; }
+  .c64-boot.pixel-loading.skjult { opacity: 0; }
   .c64-boot::after {
     content: '';
     position: absolute; inset: 0;
@@ -149,8 +158,8 @@
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    gap: clamp(2.5rem, 6vw, 6rem);
-    padding-top: calc(15vh + var(--safe-y));
+    gap: clamp(2.6rem, 6.3vw, 6.3rem);
+    padding-top: calc(13vh + var(--safe-y));
     padding-left: calc(3vw + var(--safe-x));
     padding-right: calc(3vw + var(--safe-x));
   }
@@ -159,13 +168,13 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.5rem;
+    gap: 1.6rem;
   }
   /* Cover og skaerm-panel deler samme hoejde og topkant, saa de to kort
      staar paent paa linje i stedet for at svaeve forskudt af hinanden */
   #ambient .amb-layer .amb-split .amb-split-poster .art-fg {
     position: static;
-    height: 52vh;
+    height: 55vh;
     width: auto;
     aspect-ratio: 2 / 3;
     object-fit: contain;
@@ -177,27 +186,25 @@
   }
   #ambient .amb-layer .amb-split .amb-caption {
     position: static;
-    max-width: 26vh;
+    max-width: 27vh;
     text-align: center;
     text-shadow: none;
   }
-  #ambient .amb-layer .amb-split .amb-caption .amb-caption-title { font-size: 2.3rem; }
-  #ambient .amb-layer .amb-split .amb-caption .amb-caption-sub { font-size: 1.15rem; margin-top: 0.5rem; }
+  #ambient .amb-layer .amb-split .amb-caption .amb-caption-title { font-size: 2.4rem; }
+  #ambient .amb-layer .amb-split .amb-caption .amb-caption-sub { font-size: 1.2rem; margin-top: 0.5rem; }
   #ambient .amb-layer .amb-split .amb-split-screen { flex: 0 0 auto; }
   /* CRT-rammen droppet for split-layoutet - rent skaermpanel i stedet,
-     samme hoejde som coveret ved siden af */
+     samme hoejde som coveret ved siden af. Altid synligt (ikke afhaengigt
+     af 'on'), saa loadeskaermen indeni kan ses foer videoen er klar */
   #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen {
     position: relative;
-    height: 52vh;
+    height: 55vh;
     aspect-ratio: 4 / 3;
     background: #000;
     border-radius: 1rem;
     overflow: hidden;
     box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.65);
-    opacity: 0;
-    transition: opacity 0.8s ease;
   }
-  #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen.on { opacity: 1; }
   #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen canvas {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
@@ -997,13 +1004,35 @@ var Ambient = (function () {
       }
 
       // Pixel-perfekt rendering: video skjules, tegnes paa canvas i stedet
-      var pc = null, pctx = null, pcWrap = null;
+      var pc = null, pctx = null, pcWrap = null, loadingEl = null;
       if (spec.pixelated) {
         v.classList.add('pixel-src');
         pc = document.createElement('canvas');
         pctx = pc.getContext('2d');
         pcWrap = spec.crtFrame === false ? makePixelScreen() : makeCrtTv();
+        // C64-loadeskaerm - vises straks og bliver staaende, indtil videoen
+        // rent faktisk er klar til at spille (ingen fast varighed/ritual)
+        loadingEl = document.createElement('div');
+        loadingEl.className = 'c64-boot pixel-loading';
+        var loadField = document.createElement('div');
+        loadField.className = 'c64-field';
+        var loadText = document.createElement('pre');
+        loadText.className = 'c64-text';
+        loadText.textContent = 'LOADING';
+        loadText.appendChild(document.createTextNode(' '));
+        loadText.appendChild(el('span', 'c64-cursor'));
+        loadField.appendChild(loadText);
+        loadingEl.appendChild(loadField);
+        pcWrap.screen.appendChild(loadingEl);
         pcWrap.screen.appendChild(pc);
+      }
+
+      function removeLoading() {
+        if (!loadingEl) return;
+        var le = loadingEl;
+        loadingEl = null;
+        le.classList.add('skjult');
+        setTimeout(function () { le.remove(); }, 400);
       }
 
       // Coveret fader vaek, mens previewet koerer, og vender tilbage bagefter
@@ -1012,6 +1041,7 @@ var Ambient = (function () {
       v.addEventListener('playing', function () {
         v.classList.add('on');
         if (pcWrap) pcWrap.tv.classList.add('on');
+        removeLoading();
         if (!spec.keepArt) {
           var art = artEl();
           if (art) art.classList.add('skjult');
@@ -1064,6 +1094,7 @@ var Ambient = (function () {
         document.body.classList.remove('cinema');
         v.remove();
         if (pcWrap) pcWrap.tv.remove();
+        removeLoading();
         if (spec.onVideoFail) spec.onVideoFail();
       }); // stillbilledet bliver staaende
       setSrc();
@@ -1284,7 +1315,6 @@ var LONGPLAYS = [
       'https://archive.org/download/C64GVA302-1942/1942_512kb.mp4'
     ],
     item: 'C64GVA302-1942', match: null,
-    playUrl: 'https://c64.krissz.hu/1942/play-online/',
     start: 120, scene: scene(210, 20, '✈️') },
   { name: 'Boulder Dash', sub: 'First Star, 1984', cover: c64CoverUrl(218),
     urls: [
