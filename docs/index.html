@@ -1249,7 +1249,10 @@ var VIDEOS = [
     url: 'media/' + v[1] + '.mp4',
     poster: 'media/' + v[1] + '.jpg',
     durText: v[2],
-    scene: v[3]
+    scene: v[3],
+    // De ffmpeg-genererede gradient-klip (klipN) spilles meget langsomt
+    // paa forsidens video-vaeg, saa bevaegelsen bliver rolig og ambient
+    gradient: /^klip/.test(v[1])
   };
 });
 
@@ -1347,6 +1350,13 @@ function makeVideoWall() {
     vid.setAttribute('playsinline', '');
     vid.addEventListener('playing', function () { vid.classList.add('on'); });
     vid.addEventListener('error', function () { vid.remove(); });
+    // Gradient-klippene koeres meget langsomt, saa vaeggen virker rolig
+    if (item.gradient) {
+      var setRate = function () { vid.playbackRate = 0.15; };
+      setRate();
+      vid.addEventListener('loadedmetadata', setRate);
+      vid.addEventListener('play', setRate);
+    }
     vid.src = item.url;
     if (vid.play) vid.play().catch(function () {});
     cell.appendChild(vid);
