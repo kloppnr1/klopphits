@@ -212,30 +212,30 @@
     object-fit: contain;
     image-rendering: pixelated;
   }
-  /* Play-knap: vises i skaermpanelet, indtil brugeren rent faktisk
-     vaelger at starte spillet */
-  #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen .amb-play-btn {
-    position: absolute; inset: 0;
-    margin: auto;
-    width: fit-content; height: fit-content;
-    display: flex; align-items: center; gap: 0.8rem;
-    padding: 1.1rem 2.2rem;
+  /* Selvstaendig knap til at aabne en ekstern spilbar version (fx en
+     browser-emulator) - helt uafhaengig af den lokale video, som altid
+     autoplayer som sædvanligt. Ingen loadeskaerm her - blot en direkte
+     genvej ud af appen */
+  #ambient .amb-layer .amb-split .amb-split-poster .amb-external-btn {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.7rem 1.4rem;
     border: none; border-radius: 999px;
-    background: rgba(255, 255, 255, 0.16);
-    backdrop-filter: blur(16px);
+    background: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(14px);
     color: #fff;
-    font: inherit; font-size: 1.5rem; font-weight: 700;
+    text-decoration: none;
+    font: inherit; font-size: 1.05rem; font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 0.9rem 2.2rem rgba(0, 0, 0, 0.55), inset 0 0 0 1.5px rgba(255, 255, 255, 0.28);
+    box-shadow: 0 0.5rem 1.4rem rgba(0, 0, 0, 0.45), inset 0 0 0 1.5px rgba(255, 255, 255, 0.24);
     transition: transform 0.2s ease, background-color 0.2s ease;
   }
-  #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen .amb-play-btn:hover,
-  #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen .amb-play-btn:focus-visible {
-    background: rgba(255, 255, 255, 0.24);
-    transform: scale(1.05);
+  #ambient .amb-layer .amb-split .amb-split-poster .amb-external-btn:hover,
+  #ambient .amb-layer .amb-split .amb-split-poster .amb-external-btn:focus-visible {
+    background: rgba(255, 255, 255, 0.22);
+    transform: scale(1.04);
   }
-  #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen .amb-play-btn svg {
-    width: 1.9rem; height: 1.9rem;
+  #ambient .amb-layer .amb-split .amb-split-poster .amb-external-btn svg {
+    width: 1.3rem; height: 1.3rem;
   }
   #ambient .amb-layer video.hero-video {
     position: absolute; inset: 0;
@@ -955,7 +955,6 @@ var Ambient = (function () {
   // force: vis igen selv om noeglen er uaendret (bruges til A = afspil igen)
   function show(key, spec, force) {
     if ((key === currentKey && !force) || !spec) return;
-    var publicHandle = null;
     currentKey = key;
     if (!spec.keepCinema) document.body.classList.remove('cinema');
     active = 1 - active;
@@ -1024,6 +1023,16 @@ var Ambient = (function () {
               pcap.appendChild(pcapSub);
             }
             posterHost.appendChild(pcap);
+            if (spec.caption.externalUrl) {
+              // Selvstaendig genvej ud af appen - ingen loadeskaerm, bare
+              // direkte videre til den eksterne, spilbare side
+              var extBtn = document.createElement('a');
+              extBtn.className = 'amb-external-btn';
+              extBtn.href = spec.caption.externalUrl;
+              extBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M9 5H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-4"/></svg><span>' +
+                (spec.caption.externalLabel || 'Åbn online') + '</span>';
+              posterHost.appendChild(extBtn);
+            }
           }
         };
         fg.src = spec.img;
@@ -1054,37 +1063,14 @@ var Ambient = (function () {
       }
 
       // Pixel-perfekt rendering: video skjules, tegnes paa canvas i stedet
-      var pc = null, pctx = null, pcWrap = null, overlayEl = null, playBtn = null;
+      var pc = null, pctx = null, pcWrap = null, overlayEl = null;
       if (spec.pixelated) {
         v.classList.add('pixel-src');
         pc = document.createElement('canvas');
         pctx = pc.getContext('2d');
         pcWrap = spec.crtFrame === false ? makePixelScreen() : makeCrtTv();
-        if (spec.playGate) {
-          // Vent paa et eksplicit Play-tryk, i stedet for at starte af sig selv
-          playBtn = document.createElement('button');
-          playBtn.type = 'button';
-          playBtn.className = 'amb-play-btn';
-          playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>Play</span>';
-          playBtn.addEventListener('click', function () { startPlayback(); });
-          pcWrap.screen.appendChild(playBtn);
-        } else {
-          showLoadingIndicator();
-        }
-        pcWrap.screen.appendChild(pc);
-      }
-
-      function removeOverlay() {
-        if (!overlayEl) return;
-        var oe = overlayEl;
-        overlayEl = null;
-        oe.classList.add('skjult');
-        setTimeout(function () { oe.remove(); }, 400);
-      }
-
-      // C64-loadeskaerm - bliver staaende, indtil videoen rent faktisk er
-      // klar til at spille (ingen fast varighed)
-      function showLoadingIndicator() {
+        // C64-loadeskaerm - vises straks og bliver staaende, indtil videoen
+        // rent faktisk er klar til at spille (ingen fast varighed/ritual)
         overlayEl = document.createElement('div');
         overlayEl.className = 'c64-boot pixel-loading';
         var loadField = document.createElement('div');
@@ -1096,40 +1082,21 @@ var Ambient = (function () {
         loadField.appendChild(loadText);
         overlayEl.appendChild(loadField);
         pcWrap.screen.appendChild(overlayEl);
+        pcWrap.screen.appendChild(pc);
       }
 
-      // Fuldt C64-boot-ritual (LOAD "NAVN",8,1 / SEARCHING / LOADING / READY.),
-      // skrevet tegn for tegn som paa den aegte maskine
-      function runBootRitual(name, onDone) {
-        overlayEl = document.createElement('div');
-        overlayEl.className = 'c64-boot pixel-loading';
-        var field = document.createElement('div');
-        field.className = 'c64-field';
-        var pre = document.createElement('pre');
-        pre.className = 'c64-text';
-        var cur = el('span', 'c64-cursor');
-        pre.appendChild(cur);
-        field.appendChild(pre);
-        overlayEl.appendChild(field);
-        pcWrap.screen.appendChild(overlayEl);
-
-        function addText(s) { pre.insertBefore(document.createTextNode(s), cur); }
-        var t = 250;
-        var line = 'LOAD "' + name + '",8,1';
-        for (var ci = 0; ci < line.length; ci++) {
-          (function (ch, tt) { setTimeout(function () { addText(ch); }, tt); })(line[ci], t);
-          t += 42;
-        }
-        t += 300; setTimeout(function () { addText('\n\nSEARCHING FOR ' + name + '\n'); }, t);
-        t += 600; setTimeout(function () { addText('LOADING\n'); }, t);
-        t += 650; setTimeout(function () { addText('READY.\n'); onDone(); }, t);
+      function removeOverlay() {
+        if (!overlayEl) return;
+        var oe = overlayEl;
+        overlayEl = null;
+        oe.classList.add('skjult');
+        setTimeout(function () { oe.remove(); }, 400);
       }
 
-      // Afsloeringen venter paa BAADE at videoen rent faktisk spiller OG at
-      // boot-ritualet (hvis noget) er faerdigt - alt efter hvad der er langsomst
-      var videoReady = false, bootDone = true;
-      function tryReveal() {
-        if (!videoReady || !bootDone) return;
+      // Coveret fader vaek, mens previewet koerer, og vender tilbage bagefter
+      // - medmindre spec.keepArt beder om at det altid skal blive staaende
+      function artEl() { return layer.querySelector('.art-fg'); }
+      v.addEventListener('playing', function () {
         v.classList.add('on');
         if (pcWrap) pcWrap.tv.classList.add('on');
         removeOverlay();
@@ -1138,12 +1105,7 @@ var Ambient = (function () {
           if (art) art.classList.add('skjult');
         }
         document.body.classList.add('cinema');
-      }
-
-      // Coveret fader vaek, mens previewet koerer, og vender tilbage bagefter
-      // - medmindre spec.keepArt beder om at det altid skal blive staaende
-      function artEl() { return layer.querySelector('.art-fg'); }
-      v.addEventListener('playing', function () { videoReady = true; tryReveal(); });
+      });
       // Afspil een gang (eller til preview-loftet) og fald roligt tilbage
       function endPreview() {
         document.body.classList.remove('cinema');
@@ -1193,25 +1155,7 @@ var Ambient = (function () {
         removeOverlay();
         if (spec.onVideoFail) spec.onVideoFail();
       }); // stillbilledet bliver staaende
-
-      // Starter selve hentningen/afspilningen - enten straks, eller foerst
-      // naar spec.playGate's Play-knap trykkes
-      function startPlayback() {
-        if (playBtn) { playBtn.remove(); playBtn = null; }
-        if (spec.bootName) {
-          bootDone = false;
-          runBootRitual(spec.bootName, function () { bootDone = true; tryReveal(); });
-        } else if (!overlayEl) {
-          showLoadingIndicator();
-        }
-        setSrc();
-      }
-
-      if (spec.playGate) {
-        publicHandle = { startPlayback: startPlayback };
-      } else {
-        setSrc();
-      }
+      setSrc();
       screenHost.appendChild(v);
       if (pcWrap) {
         screenHost.appendChild(pcWrap.tv);
@@ -1235,7 +1179,6 @@ var Ambient = (function () {
     setTimeout(function () {
       if (!hidden.classList.contains('visible')) stopVideo(hidden);
     }, 1400);
-    return publicHandle;
   }
   return { show: show, stopPreview: stopPreview, isPreviewing: isPreviewing };
 })();
@@ -1429,6 +1372,7 @@ var LONGPLAYS = [
       'https://archive.org/download/C64GVA302-1942/1942_512kb.mp4'
     ],
     item: 'C64GVA302-1942', match: null,
+    playUrl: 'https://c64.krissz.hu/1942/play-online/',
     start: 120, scene: scene(210, 20, '✈️') },
   { name: 'Boulder Dash', sub: 'First Star, 1984', cover: c64CoverUrl(218),
     urls: [
@@ -1830,8 +1774,6 @@ var retroScreen = makeSection('retro', 'Retro spil',
     Ambient.show('retro-grid', { svg: RETRO_ART_HERO });
   },
   function (i) {
-    var g = LONGPLAYS[i];
-    if (g.playUrl) { window.location.href = g.playUrl; return; }
     Screens.push(retroPlayScreen, i);
   }
 );
@@ -1840,23 +1782,31 @@ var retroScreen = makeSection('retro', 'Retro spil',
 // samme. Samme statiske regnbue-baggrund som gitteret.
 var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
   var current = null;
-  var playHandle = null; // { startPlayback } - sat naar der er noget at spille
+
+  function captionFor(g) {
+    var cap = { title: g.name, sub: g.sub };
+    if (g.playUrl) {
+      // Selvstaendig genvej til en ekstern, spilbar version - helt
+      // uafhaengig af den lokale video, som stadig autoplayer som altid
+      cap.externalUrl = g.playUrl;
+      cap.externalLabel = 'Spil online';
+    }
+    return cap;
+  }
 
   function attempt(g, i, urls) {
-    return Ambient.show('retro-play:' + i, {
+    Ambient.show('retro-play:' + i, {
       svg: RETRO_ART_HERO,
       img: g.cover,
       imgArt: true,
       keepArt: true, // cover, tekst og video vises samtidig - intet fader vaek
-      caption: { title: g.name, sub: g.sub },
+      caption: captionFor(g),
       splitLayout: true, // plakat (cover + tekst) ved siden af CRT'en, ikke oven i
       keepCinema: true,
       video: urls,
       videoStart: g.start,
       pixelated: true, // testens vinder: pixel-perfekt C64-rendering
       crtFrame: false, // rent skaermpanel, intet fjernsyns-kabinet
-      playGate: true, // vent paa Play-knappen, start ikke af sig selv
-      bootName: g.name.toUpperCase(), // fuldt C64-boot-ritual naar der trykkes Play
       onVideoFail: function () {
         // Alle kandidater fejlede: slaa filnavnet op som sidste udvej
         if (g.resolved || !g.item) return;
@@ -1864,8 +1814,7 @@ var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
         resolveArchiveMp4(g.item, g.match).then(function (url) {
           if (url && current === i && document.body.dataset.screen === 'retro-play') {
             g.urls = [url];
-            // Brugeren har allerede trykket Play denne omgang - fortsaet automatisk
-            attempt(g, i, g.urls).startPlayback();
+            attempt(g, i, g.urls);
           }
         });
       }
@@ -1874,19 +1823,18 @@ var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
 
   function play(i) {
     current = i;
-    playHandle = null;
     var g = LONGPLAYS[i];
     var candidates = g.urls || (g.url ? [g.url] : null);
-    var stillSpec = { svg: RETRO_ART_HERO, img: g.cover, imgArt: true, caption: { title: g.name, sub: g.sub }, splitLayout: true };
+    var stillSpec = { svg: RETRO_ART_HERO, img: g.cover, imgArt: true, caption: captionFor(g), splitLayout: true };
     if (candidates) {
-      playHandle = attempt(g, i, candidates);
+      attempt(g, i, candidates);
     } else if (g.item && !g.resolved) {
-      // Intet gaettet filnavn - vis coveret straks (uden Play-knap endnu) og
-      // slaa det rigtige filnavn op via metadata-API'et
+      // Intet gaettet filnavn - vis coveret straks og slaa det rigtige
+      // filnavn op via metadata-API'et, saa videoen kan koble sig paa
       g.resolved = true;
       Ambient.show('retro-play:' + i, stillSpec, true);
       resolveArchiveMp4(g.item, g.match).then(function (url) {
-        if (url && current === i) { g.urls = [url]; playHandle = attempt(g, i, g.urls); }
+        if (url && current === i) { g.urls = [url]; attempt(g, i, g.urls); }
       });
     } else {
       Ambient.show('retro-play:' + i, stillSpec, true);
@@ -1900,12 +1848,9 @@ var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
   screen.leave = function () {
     Ambient.stopPreview();
     current = null;
-    playHandle = null;
   };
   screen.onInput = function (action) {
-    if (action === 'a') {
-      if (playHandle) { playHandle.startPlayback(); }
-    } else if (action === 'b') {
+    if (action === 'b') {
       document.body.classList.remove('cinema');
       Screens.pop();
     }
