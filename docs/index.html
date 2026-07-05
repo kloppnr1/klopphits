@@ -220,22 +220,34 @@
     display: flex; align-items: center; gap: 0.6rem;
     padding: 0.7rem 1.4rem;
     border: none; border-radius: 999px;
-    background: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.16);
     backdrop-filter: blur(14px);
     color: #fff;
     text-decoration: none;
     font: inherit; font-size: 1.05rem; font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 0.5rem 1.4rem rgba(0, 0, 0, 0.45), inset 0 0 0 1.5px rgba(255, 255, 255, 0.24);
-    transition: transform 0.2s ease, background-color 0.2s ease;
+    /* Staar altid som "fokuseret", da den er den eneste kontrol paa siden
+       og skal signalere tydeligt, at A trykker paa netop den */
+    box-shadow: 0 0.5rem 1.4rem rgba(0, 0, 0, 0.45), inset 0 0 0 2px rgba(255, 255, 255, 0.55);
+    transition: transform 0.15s ease, background-color 0.15s ease;
   }
   #ambient .amb-layer .amb-split .amb-split-poster .amb-external-btn:hover,
   #ambient .amb-layer .amb-split .amb-split-poster .amb-external-btn:focus-visible {
-    background: rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.24);
     transform: scale(1.04);
   }
   #ambient .amb-layer .amb-split .amb-split-poster .amb-external-btn svg {
     width: 1.3rem; height: 1.3rem;
+  }
+  /* Tydeligt "tryk"-glimt, naar A trykkes, saa det er aabenlyst at det
+     er denne knap, der lige er blevet aktiveret */
+  #ambient .amb-layer .amb-split .amb-split-poster .amb-external-btn.pressed {
+    animation: extBtnPress 0.32s ease;
+  }
+  @keyframes extBtnPress {
+    0% { transform: scale(1); background-color: rgba(255, 255, 255, 0.16); }
+    35% { transform: scale(0.9); background-color: rgba(255, 255, 255, 0.42); }
+    100% { transform: scale(1); background-color: rgba(255, 255, 255, 0.16); }
   }
   #ambient .amb-layer video.hero-video {
     position: absolute; inset: 0;
@@ -1023,16 +1035,23 @@ var Ambient = (function () {
               pcap.appendChild(pcapSub);
             }
             posterHost.appendChild(pcap);
-            if (spec.caption.externalUrl) {
-              // Selvstaendig genvej ud af appen - ingen loadeskaerm, bare
-              // direkte videre til den eksterne, spilbare side
-              var extBtn = document.createElement('a');
-              extBtn.className = 'amb-external-btn';
-              extBtn.href = spec.caption.externalUrl;
-              extBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M9 5H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-4"/></svg><span>' +
-                (spec.caption.externalLabel || 'Åbn online') + '</span>';
-              posterHost.appendChild(extBtn);
-            }
+            // Altid vist - repraesenterer A-knappen visuelt. Har spillet en
+            // ekstern spilbar side, aabner den den direkte (ingen loadeskaerm)
+            var extBtn = document.createElement('button');
+            extBtn.type = 'button';
+            extBtn.className = 'amb-external-btn';
+            var extUrl = spec.caption.externalUrl;
+            extBtn.innerHTML = extUrl
+              ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M9 5H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-4"/></svg><span>' +
+                (spec.caption.externalLabel || 'Åbn online') + '</span>'
+              : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>Play</span>';
+            extBtn.addEventListener('click', function () {
+              extBtn.classList.remove('pressed');
+              void extBtn.offsetWidth; // genstart animationen ved gentagne tryk
+              extBtn.classList.add('pressed');
+              if (extUrl) window.location.href = extUrl;
+            });
+            posterHost.appendChild(extBtn);
           }
         };
         fg.src = spec.img;
@@ -1850,7 +1869,12 @@ var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
     current = null;
   };
   screen.onInput = function (action) {
-    if (action === 'b') {
+    if (action === 'a') {
+      // Aktiver knappen visuelt/funktionelt, saa det er tydeligt at A
+      // rammer netop den - samme klik-haandtering som touch/mus bruger
+      var btn = document.querySelector('#ambient .amb-layer.visible .amb-external-btn');
+      if (btn) btn.click();
+    } else if (action === 'b') {
       document.body.classList.remove('cinema');
       Screens.pop();
     }
