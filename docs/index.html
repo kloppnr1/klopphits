@@ -594,16 +594,19 @@ var Ambient = (function () {
       var v = document.createElement('video');
       v.className = 'hero-video';
       v.muted = true;
-      v.loop = true;
       v.autoplay = true;
       v.playsInline = true;
       // iOS/Safari kraever attributterne (ikke kun egenskaberne) for autoplay
       v.setAttribute('muted', '');
       v.setAttribute('autoplay', '');
-      v.setAttribute('loop', '');
       v.setAttribute('playsinline', '');
       v.addEventListener('playing', function () { v.classList.add('on'); });
-      v.addEventListener('error', function () { v.remove(); }); // SVG-scenen bliver staaende
+      // Afspil een gang og fald roligt tilbage til stillbilledet (ingen loop)
+      v.addEventListener('ended', function () {
+        v.classList.remove('on');
+        setTimeout(function () { v.remove(); }, 900);
+      });
+      v.addEventListener('error', function () { v.remove(); }); // stillbilledet bliver staaende
       v.src = spec.video;
       layer.appendChild(v);
       if (v.play) v.play().catch(function () {});
@@ -835,7 +838,7 @@ var homeScreen = makeScreen('home', function (screen, root) {
     clearTimeout(homeVideoTimer);
     if (m.id === 'videos') {
       homeVideoTimer = setTimeout(function () {
-        Ambient.show('videos-live', { svg: HEROES.videos, video: VIDEOS[0].url });
+        Ambient.show('videos-live', { svg: HEROES.videos, img: VIDEOS[0].poster, video: VIDEOS[0].url });
       }, 700);
     }
     if (animate) {
@@ -976,6 +979,7 @@ var videosScreen = makeScreen('videos', function (screen, root) {
     previewTimer = setTimeout(function () {
       Ambient.show('videos:' + i, {
         svg: sceneSvg(VIDEOS[i].scene, 'v' + i),
+        img: VIDEOS[i].poster,
         video: VIDEOS[i].url
       });
     }, 450);
