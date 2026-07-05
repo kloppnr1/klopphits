@@ -123,8 +123,23 @@
     filter: drop-shadow(0 1.5rem 3.5rem rgba(0, 0, 0, 0.7));
     transition: opacity 0.6s ease;
   }
-  /* Coveret gemmes vaek, mens longplay-previewet koerer */
+  /* Coveret gemmes vaek, mens longplay-previewet koerer (medmindre keepArt) */
   #ambient .amb-layer .art-fg.skjult { opacity: 0; }
+  /* Lille tekstbeskrivelse - bruges hvor cover + video vises samtidig */
+  #ambient .amb-layer .amb-caption {
+    position: absolute;
+    z-index: 3;
+    left: calc(3vw + var(--safe-x));
+    bottom: calc(3vw + var(--safe-y) + 1rem);
+    max-width: 32vw;
+    text-shadow: 0 0.2rem 1rem rgba(0, 0, 0, 0.6);
+  }
+  #ambient .amb-layer .amb-caption .amb-caption-title {
+    font-size: 2rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.1;
+  }
+  #ambient .amb-layer .amb-caption .amb-caption-sub {
+    font-size: 1.1rem; color: rgba(235, 235, 245, 0.72); margin-top: 0.3rem;
+  }
   #ambient .amb-layer video.hero-video {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
@@ -820,6 +835,21 @@ var Ambient = (function () {
     stopVideo(layer);
     layer.innerHTML = spec.svg || '';
     if (spec.node) layer.appendChild(spec.node);
+    if (spec.caption) {
+      var cap = document.createElement('div');
+      cap.className = 'amb-caption';
+      var capTitle = document.createElement('div');
+      capTitle.className = 'amb-caption-title';
+      capTitle.textContent = spec.caption.title || '';
+      cap.appendChild(capTitle);
+      if (spec.caption.sub) {
+        var capSub = document.createElement('div');
+        capSub.className = 'amb-caption-sub';
+        capSub.textContent = spec.caption.sub;
+        cap.appendChild(capSub);
+      }
+      layer.appendChild(cap);
+    }
     if (spec.img) {
       if (spec.imgArt) {
         // Coveret staar paa svg-baggrunden (Commodore-heroen)
@@ -829,8 +859,9 @@ var Ambient = (function () {
         fg.onload = function () {
           if (currentKey !== key) return;
           // Kommer coveret foerst efter previewet er startet, skjules det straks
+          // (medmindre spec.keepArt beder om at coveret altid skal blive staaende)
           var pv = layer.querySelector('video');
-          if (pv && pv.classList.contains('on')) fg.classList.add('skjult');
+          if (!spec.keepArt && pv && pv.classList.contains('on')) fg.classList.add('skjult');
           layer.appendChild(fg);
         };
         fg.src = spec.img;
@@ -871,12 +902,15 @@ var Ambient = (function () {
       }
 
       // Coveret fader vaek, mens previewet koerer, og vender tilbage bagefter
+      // - medmindre spec.keepArt beder om at det altid skal blive staaende
       function artEl() { return layer.querySelector('.art-fg'); }
       v.addEventListener('playing', function () {
         v.classList.add('on');
         if (pcWrap) pcWrap.tv.classList.add('on');
-        var art = artEl();
-        if (art) art.classList.add('skjult');
+        if (!spec.keepArt) {
+          var art = artEl();
+          if (art) art.classList.add('skjult');
+        }
         document.body.classList.add('cinema');
       });
       // Afspil een gang (eller til preview-loftet) og fald roligt tilbage
@@ -1565,6 +1599,8 @@ var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
       svg: RETRO_ART_HERO,
       img: g.cover,
       imgArt: true,
+      keepArt: true, // cover, tekst og video vises samtidig - intet fader vaek
+      caption: { title: g.name, sub: g.sub },
       keepCinema: true,
       video: urls,
       videoStart: g.start,
@@ -1587,18 +1623,19 @@ var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
     current = i;
     var g = LONGPLAYS[i];
     var candidates = g.urls || (g.url ? [g.url] : null);
+    var stillSpec = { svg: RETRO_ART_HERO, img: g.cover, imgArt: true, caption: { title: g.name, sub: g.sub } };
     if (candidates) {
       attempt(g, i, candidates);
     } else if (g.item && !g.resolved) {
       // Intet gaettet filnavn - vis coveret straks og slaa det rigtige
       // filnavn op via metadata-API'et, saa videoen kan koble sig paa
       g.resolved = true;
-      Ambient.show('retro-play:' + i, { svg: RETRO_ART_HERO, img: g.cover, imgArt: true }, true);
+      Ambient.show('retro-play:' + i, stillSpec, true);
       resolveArchiveMp4(g.item, g.match).then(function (url) {
         if (url && current === i) { g.urls = [url]; attempt(g, i, g.urls); }
       });
     } else {
-      Ambient.show('retro-play:' + i, { svg: RETRO_ART_HERO, img: g.cover, imgArt: true }, true);
+      Ambient.show('retro-play:' + i, stillSpec, true);
     }
   }
 
