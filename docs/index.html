@@ -585,18 +585,26 @@
     object-fit: contain;
     background: #0d0b10;
     padding: 0.4rem;
+    /* Ens toning ovenpaa de meget forskellige illustrationsstile (foto,
+       stregtegning, forskellige aeraers farvevalg), saa de laeser som
+       en samlet samling frem for et broget miskmask */
+    filter: saturate(0.82) contrast(1.06) brightness(0.97) sepia(0.06);
   }
-  /* Ramme om retro-covers: samler de vidt forskellige naturlige
-     coverformater i et ensartet "billedramme"-udtryk, i stedet for at
-     lade dem staa alene i uens stoerrelser */
+  /* Kraftig ramme om retro-covers: samler baade de vidt forskellige
+     naturlige coverformater OG de meget forskellige illustrationsstile
+     i et ensartet "kassette-etui"-udtryk */
   .tile.steam-tile.retro-tile {
-    padding: 0.55rem;
-    background: linear-gradient(155deg, #3d3229 0%, #17130f 100%);
-    box-shadow: 0 0.4rem 1.2rem rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 210, 150, 0.16);
+    padding: 0.9rem;
+    background: linear-gradient(155deg, #453626 0%, #14100b 100%);
+    box-shadow:
+      0 0.6rem 1.6rem rgba(0, 0, 0, 0.5),
+      inset 0 0 0 1px rgba(255, 214, 150, 0.22),
+      inset 0 0 0 3px rgba(0, 0, 0, 0.35);
   }
   .tile.steam-tile.retro-tile .fallback,
   .tile.steam-tile.retro-tile img.cover {
-    border-radius: 0.5rem;
+    border-radius: 0.4rem;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5);
   }
   .tile.steam-tile .fallback {
     position: absolute; inset: 0;
