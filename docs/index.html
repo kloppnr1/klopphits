@@ -257,18 +257,18 @@
   }
   #ambient .amb-vignette {
     position: absolute; inset: 0;
-    background: linear-gradient(rgba(5, 5, 7, 0.1) 0%, rgba(5, 5, 7, 0.35) 55%, var(--bg) 97%);
+    background: linear-gradient(rgba(5, 5, 7, 0) 0%, rgba(5, 5, 7, 0.16) 60%, rgba(5, 5, 7, 0.5) 100%);
   }
   #ambient .amb-dim {
     position: absolute; inset: 0;
-    background: rgba(5, 5, 7, 0.64);
+    background: rgba(5, 5, 7, 0.46);
     opacity: 0;
     transition: opacity 0.45s ease;
   }
   body.in-section #ambient .amb-dim { opacity: 1; }
   /* Hvor forhaandsvisningen er stjernen: naesten ingen daempning */
   body[data-screen="videos"] #ambient .amb-dim,
-  body[data-screen="retro"] #ambient .amb-dim { opacity: 0.22; }
+  body[data-screen="retro"] #ambient .amb-dim { opacity: 0.16; }
   /* Biograf: videoen staar helt ren - vignet og daempning fader vaek */
   #ambient .amb-vignette { transition: opacity 0.45s ease; }
   body.cinema #ambient .amb-vignette { opacity: 0; }
