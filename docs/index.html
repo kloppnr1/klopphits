@@ -69,6 +69,18 @@
     transition: opacity 0.8s ease;
   }
   #ambient .amb-layer video.hero-video.on { opacity: 1; }
+  /* Pixel-perfekt C64-rendering (testens vinder, tilstand 4):
+     videoen tegnes paa canvas og opskaleres uden udjaevning */
+  #ambient .amb-layer canvas.hero-canvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+  }
+  #ambient .amb-layer canvas.hero-canvas.on { opacity: 1; }
+  #ambient .amb-layer video.pixel-src { opacity: 0 !important; }
   /* Steam-katalog: vaeg af spil-covers som paa Steams egen biblioteksside */
   .cover-wall {
     position: absolute; inset: -7%;
@@ -575,10 +587,16 @@ var Ambient = (function () {
 
   // Stop en igangvaerende preview og fald tilbage til stillbilledet
   function stopPreview() {
-    var v = currentVideo();
+    var lay = layers[active];
+    var v = lay.querySelector('video');
     if (!v) return false;
+    var pc = lay.querySelector('canvas.hero-canvas');
     v.classList.remove('on');
-    setTimeout(function () { v.remove(); }, 900);
+    if (pc) pc.classList.remove('on');
+    setTimeout(function () {
+      v.remove();
+      if (pc) pc.remove();
+    }, 900);
     return true;
   }
 
@@ -617,11 +635,28 @@ var Ambient = (function () {
       v.setAttribute('muted', '');
       v.setAttribute('autoplay', '');
       v.setAttribute('playsinline', '');
-      v.addEventListener('playing', function () { v.classList.add('on'); });
+
+      // Pixel-perfekt rendering: video skjules, tegnes paa canvas i stedet
+      var pc = null, pctx = null;
+      if (spec.pixelated) {
+        v.classList.add('pixel-src');
+        pc = document.createElement('canvas');
+        pc.className = 'hero-canvas';
+        pctx = pc.getContext('2d');
+      }
+
+      v.addEventListener('playing', function () {
+        v.classList.add('on');
+        if (pc) pc.classList.add('on');
+      });
       // Afspil een gang (eller til preview-loftet) og fald roligt tilbage
       function endPreview() {
         v.classList.remove('on');
-        setTimeout(function () { v.remove(); }, 900);
+        if (pc) pc.classList.remove('on');
+        setTimeout(function () {
+          v.remove();
+          if (pc) pc.remove();
+        }, 900);
       }
       v.addEventListener('ended', endPreview);
       if (spec.videoMax) {
@@ -630,9 +665,26 @@ var Ambient = (function () {
           if (v.currentTime - startAt >= spec.videoMax) endPreview();
         });
       }
-      v.addEventListener('error', function () { v.remove(); }); // stillbilledet bliver staaende
+      v.addEventListener('error', function () {
+        v.remove();
+        if (pc) pc.remove();
+      }); // stillbilledet bliver staaende
       v.src = spec.videoStart ? spec.video + '#t=' + spec.videoStart : spec.video;
       layer.appendChild(v);
+      if (pc) {
+        layer.appendChild(pc);
+        (function loop() {
+          if (!v.isConnected) return;
+          if (v.videoWidth) {
+            if (pc.width !== v.videoWidth) {
+              pc.width = v.videoWidth;
+              pc.height = v.videoHeight;
+            }
+            pctx.drawImage(v, 0, 0);
+          }
+          requestAnimationFrame(loop);
+        })();
+      }
       if (v.play) v.play().catch(function () {});
     }
     layer.classList.add('visible');
@@ -788,22 +840,42 @@ var STEAM = [
 // C64-longplays: fan-optagede gennemspilninger, distribueret via
 // Archive.org (World of Longplays / MadMatty). Streames direkte;
 // previews starter et stykke inde og stopper efter 15 sekunder.
+// Slaar det praecise MP4-filnavn op i et archive.org-arkiv ved runtime
+// (metadata-API'et er CORS-aabent). Ingen gaettede filnavne.
+var iaMetaCache = {};
+function resolveArchiveMp4(item, match) {
+  if (!iaMetaCache[item]) {
+    iaMetaCache[item] = fetch('https://archive.org/metadata/' + item)
+      .then(function (r) { return r.json(); });
+  }
+  return iaMetaCache[item].then(function (meta) {
+    var files = (meta.files || []).filter(function (f) {
+      return /\.mp4$/i.test(f.name) && (!match || match.test(f.name));
+    });
+    if (!files.length) return null;
+    // Foretraek den mindste fil (typisk web-afledningen)
+    files.sort(function (a, b) { return (+a.size || 9e12) - (+b.size || 9e12); });
+    return 'https://archive.org/download/' + item + '/' +
+      encodeURIComponent(files[0].name).replace(/%2F/g, '/');
+  }).catch(function () { return null; });
+}
+
 var LONGPLAY_BASE = 'https://archive.org/download/commodore64longplaysvarious/';
 // Brugerens fire titler foerst (cover art fra coverbrowser; longplay-URL
 // kobles paa, naar download-linket kendes). Derefter tre titler med
 // verificerede longplays fra MadMatty-samlingen.
 var LONGPLAYS = [
   { name: 'RoboCop', sub: 'Ocean, 1988', cover: c64CoverUrl(1309),
-    url: 'https://archive.org/download/Commodore-64-Oyun-Video/00057-Robocop%20(C64)(LongPlays).mp4',
+    item: 'Commodore-64-Oyun-Video', match: /robocop/i,
     start: 180, scene: scene(210, 0, '🤖') },
   { name: 'Skate or Die', sub: 'Electronic Arts, 1987', cover: c64CoverUrl(1420),
-    url: 'https://archive.org/download/Commodore-64-Oyun-Video/00410-Skate%20Or%20Die%20(C64)(LongPlays).mp4',
+    item: 'Commodore-64-Oyun-Video', match: /skate/i,
     start: 150, scene: scene(280, 320, '🛹') },
   { name: '1942', sub: 'Elite, 1986', cover: c64CoverUrl(4),
-    url: 'https://archive.org/download/C64GVA302-1942/C64-Gamevideoarchive302-1942_512kb.mp4',
+    item: 'C64GVA302-1942', match: null,
     start: 120, scene: scene(210, 20, '✈️') },
   { name: 'Boulder Dash', sub: 'First Star, 1984', cover: c64CoverUrl(218),
-    url: 'https://archive.org/download/TheFirstC64LongplaySerie_3/C64-Longplay068-BoulderDash_512kb.mp4',
+    item: 'TheFirstC64LongplaySerie_3', match: /boulder/i,
     start: 120, scene: scene(35, 60, '💎') },
   { name: 'Commando', sub: 'Elite, 1985', file: 'Commodore_64_Longplay_Commando_EU.mp4', start: 95, scene: scene(20, 350, '🪖') },
   { name: 'Cybernoid', sub: 'Hewson, 1988', file: 'Commodore_64_Longplay_Cybernoid_EU.mp4', start: 80, scene: scene(280, 230, '🚀') },
@@ -1205,19 +1277,30 @@ var retroScreen = makeScreen('retro', function (screen, root) {
   function showPreview(force) {
     var i = focus.index;
     var g = LONGPLAYS[i];
-    if (g.url) {
+
+    function play(f) {
       Ambient.show('retro:' + i, {
         svg: sceneSvg(g.scene, 'r' + i),
+        img: g.cover,
         video: g.url,
         videoStart: g.start,
-        videoMax: 15
-      }, force);
+        videoMax: 15,
+        pixelated: true // testens vinder: pixel-perfekt C64-rendering
+      }, f);
+    }
+
+    if (g.url) {
+      play(force);
+    } else if (g.item) {
+      // Vis coveret med det samme; slaa filnavnet op i archive.org-metadata
+      Ambient.show('retro:' + i, { svg: sceneSvg(g.scene, 'r' + i), img: g.cover }, force);
+      resolveArchiveMp4(g.item, g.match).then(function (url) {
+        if (!url) return;
+        g.url = url;
+        if (focus.index === i && document.body.dataset.screen === 'retro') play(true);
+      });
     } else {
-      // Ingen longplay endnu: vis box art i fuld skaerm
-      Ambient.show('retro:' + i, {
-        svg: sceneSvg(g.scene, 'r' + i),
-        img: g.cover
-      }, force);
+      Ambient.show('retro:' + i, { svg: sceneSvg(g.scene, 'r' + i), img: g.cover }, force);
     }
   }
 
