@@ -127,11 +127,20 @@
   #ambient .amb-layer video.hero-video.on { opacity: 1; }
   /* Pixel-perfekt C64-rendering (testens vinder, tilstand 4):
      videoen tegnes paa canvas og opskaleres uden udjaevning */
+  /* C64-gameplay vises i et indrammet vindue frem for fuld skaerm -
+     lavoploeselige kilder bliver grynede, naar de blaeses helt op */
   #ambient .amb-layer canvas.hero-canvas {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    height: 62vh;
+    width: auto;
+    max-width: 78vw;
     object-fit: contain;
     image-rendering: pixelated;
+    background: #000;
+    border-radius: 0.7rem;
+    box-shadow: 0 0 0 0.7rem #15100c, 0 2.5rem 6rem rgba(0, 0, 0, 0.8);
     opacity: 0;
     transition: opacity 0.8s ease;
     z-index: 2;
