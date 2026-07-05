@@ -296,6 +296,13 @@
   .vhero .vhero-title { font-size: 3.8rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.05; }
   .vhero .vhero-meta { font-size: 1.3rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
   .vrail .tile.media-tile { flex: 0 0 auto; width: 15rem; }
+  /* Retro-railen bruger 2:3-kassetteformat, saa box art passer perfekt */
+  .vrail.retro-rail .tile.media-tile { width: 10.5rem; aspect-ratio: 2 / 3; }
+  .tile.media-tile img.thumb {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
   .tile .caption {
     position: absolute; left: 0; right: 0; bottom: 0;
     padding: 1.8rem 0.9rem 0.65rem;
@@ -782,14 +789,19 @@ var STEAM = [
 // Archive.org (World of Longplays / MadMatty). Streames direkte;
 // previews starter et stykke inde og stopper efter 15 sekunder.
 var LONGPLAY_BASE = 'https://archive.org/download/commodore64longplaysvarious/';
+// Brugerens fire titler foerst (cover art fra coverbrowser; longplay-URL
+// kobles paa, naar download-linket kendes). Derefter tre titler med
+// verificerede longplays fra MadMatty-samlingen.
 var LONGPLAYS = [
+  { name: 'RoboCop', sub: 'Ocean, 1988', cover: c64CoverUrl(1309), scene: scene(210, 0, '🤖') },
+  { name: 'Skate or Die', sub: 'Electronic Arts, 1987', cover: c64CoverUrl(1420), scene: scene(280, 320, '🛹') },
+  { name: '1942', sub: 'Elite, 1986', cover: c64CoverUrl(4), scene: scene(210, 20, '✈️') },
+  { name: 'Boulder Dash', sub: 'First Star, 1984', cover: c64CoverUrl(218), scene: scene(35, 60, '💎') },
   { name: 'Commando', sub: 'Elite, 1985', file: 'Commodore_64_Longplay_Commando_EU.mp4', start: 95, scene: scene(20, 350, '🪖') },
   { name: 'Cybernoid', sub: 'Hewson, 1988', file: 'Commodore_64_Longplay_Cybernoid_EU.mp4', start: 80, scene: scene(280, 230, '🚀') },
-  { name: 'Bionic Commando', sub: 'Capcom, 1988', file: 'Commodore_64_Longplay_Bionic_Commando_EU.mp4', start: 90, scene: scene(120, 90, '🦾') },
-  { name: 'Lightforce', sub: 'FTL, 1986', file: 'Commodore_64_Longplay_Lightforce_EU.mp4', start: 70, scene: scene(210, 260, '🛸') },
-  { name: 'Cybernoid II', sub: 'Hewson, 1988', file: 'Commodore_64_Longplay_Cybernoid_II_EU.mp4', start: 85, scene: scene(320, 280, '🛰️') }
+  { name: 'Bionic Commando', sub: 'Capcom, 1988', file: 'Commodore_64_Longplay_Bionic_Commando_EU.mp4', start: 90, scene: scene(120, 90, '🦾') }
 ].map(function (g) {
-  g.url = LONGPLAY_BASE + g.file;
+  if (g.file) g.url = LONGPLAY_BASE + g.file;
   return g;
 });
 
@@ -932,35 +944,15 @@ var homeScreen = makeScreen('home', function (screen, root) {
   });
   focus.setItems(cards);
 
-  var homeVideoTimer = null;
-
   function syncHero(animate) {
     var m = MENU[focus.index];
     heroTitle.textContent = m.label;
     heroDesc.textContent = m.desc;
+    // Hjemmeskaermen er rolig: kun statiske heroes - previews koerer i sektionerne
     Ambient.show(m.id, {
       svg: HEROES[m.id],
       node: m.id === 'steam' ? makeCoverWall() : (m.id === 'retro' ? makeRetroWall() : undefined)
     });
-    // Hviler man paa Videoklip eller Retro, starter en live-preview
-    clearTimeout(homeVideoTimer);
-    if (m.id === 'videos') {
-      // Preview afspiller een gang; naar den slutter, fader den tilbage
-      // til sektionens eget symbolbillede (play-emblemet over havet)
-      homeVideoTimer = setTimeout(function () {
-        Ambient.show('videos-live', { svg: HEROES.videos, video: VIDEOS[0].url });
-      }, 700);
-    } else if (m.id === 'retro') {
-      // C64-gameplay oven paa covervaeggen, 15 sekunder, saa tilbage til vaeggen
-      homeVideoTimer = setTimeout(function () {
-        Ambient.show('retro-live', {
-          node: makeRetroWall(),
-          video: LONGPLAYS[0].url,
-          videoStart: LONGPLAYS[0].start,
-          videoMax: 15
-        });
-      }, 700);
-    }
     if (animate) {
       hero.classList.remove('swap');
       void hero.offsetWidth; // genstart animationen
@@ -1155,7 +1147,7 @@ var retroScreen = makeScreen('retro', function (screen, root) {
   hero.appendChild(rMeta);
   root.appendChild(hero);
 
-  var rail = el('div', 'rail vrail');
+  var rail = el('div', 'rail vrail retro-rail');
   root.appendChild(rail);
 
   var focus = new Grid(LONGPLAYS.length);
@@ -1167,15 +1159,26 @@ var retroScreen = makeScreen('retro', function (screen, root) {
     ph.style.background = g.scene.bg;
     tile.appendChild(ph);
 
-    var thumb = document.createElement('video');
-    thumb.className = 'thumb';
-    thumb.muted = true;
-    thumb.setAttribute('muted', '');
-    thumb.setAttribute('playsinline', '');
-    thumb.preload = 'metadata';
-    thumb.addEventListener('error', function () { thumb.remove(); });
-    thumb.src = g.url + '#t=' + g.start;
-    tile.appendChild(thumb);
+    if (g.cover) {
+      // Aegte box art som flise-art
+      var art = el('img', 'thumb');
+      art.alt = '';
+      art.loading = 'lazy';
+      art.addEventListener('error', function () { art.remove(); });
+      art.src = g.cover;
+      tile.appendChild(art);
+    } else if (g.url) {
+      // Gameplay-still fra longplay-videoen
+      var thumb = document.createElement('video');
+      thumb.className = 'thumb';
+      thumb.muted = true;
+      thumb.setAttribute('muted', '');
+      thumb.setAttribute('playsinline', '');
+      thumb.preload = 'metadata';
+      thumb.addEventListener('error', function () { thumb.remove(); });
+      thumb.src = g.url + '#t=' + g.start;
+      tile.appendChild(thumb);
+    }
 
     var cap = el('div', 'caption', g.name);
     cap.appendChild(el('span', 'cap-sub', g.sub));
@@ -1188,18 +1191,26 @@ var retroScreen = makeScreen('retro', function (screen, root) {
   function syncHero() {
     var g = LONGPLAYS[focus.index];
     rTitle.textContent = g.name;
-    rMeta.textContent = g.sub + ' · longplay · archive.org';
+    rMeta.textContent = g.sub + (g.url ? ' · longplay · archive.org' : ' · cover art');
   }
 
   function showPreview(force) {
     var i = focus.index;
     var g = LONGPLAYS[i];
-    Ambient.show('retro:' + i, {
-      svg: sceneSvg(g.scene, 'r' + i),
-      video: g.url,
-      videoStart: g.start,
-      videoMax: 15
-    }, force);
+    if (g.url) {
+      Ambient.show('retro:' + i, {
+        svg: sceneSvg(g.scene, 'r' + i),
+        video: g.url,
+        videoStart: g.start,
+        videoMax: 15
+      }, force);
+    } else {
+      // Ingen longplay endnu: vis box art i fuld skaerm
+      Ambient.show('retro:' + i, {
+        svg: sceneSvg(g.scene, 'r' + i),
+        img: g.cover
+      }, force);
+    }
   }
 
   function focusChanged() {
