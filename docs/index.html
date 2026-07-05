@@ -378,8 +378,11 @@
     transition: opacity 0.45s ease;
   }
   body.in-section #ambient .amb-dim { opacity: 1; }
-  /* Hvor forhaandsvisningen er stjernen: naesten ingen daempning */
+  /* Hvor forhaandsvisningen er stjernen: naesten ingen daempning.
+     Retro-gittterets covers baerer selv en kraftig ramme/mork bund,
+     saa regnbuen maa gerne staa fuldt levende bag dem */
   body[data-screen="videos"] #ambient .amb-dim,
+  body[data-screen="retro"] #ambient .amb-dim,
   body[data-screen="retro-play"] #ambient .amb-dim { opacity: 0.16; }
   /* Biograf: videoen staar helt ren - vignet og daempning fader vaek */
   #ambient .amb-vignette { transition: opacity 0.45s ease; }
