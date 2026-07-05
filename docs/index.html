@@ -61,6 +61,25 @@
     width: 100%; height: 100%;
     object-fit: cover;
   }
+  /* Art-visning til portraet-covers: hele vaerket centreret med skygge,
+     baggrunden fyldes af en sloeret kopi af coveret selv */
+  #ambient .amb-layer .art-bg {
+    position: absolute; inset: -6%;
+    width: 112%; height: 112%;
+    object-fit: cover;
+    filter: blur(42px) brightness(0.4) saturate(1.15);
+  }
+  /* Ambient-laget er 3vw stoerre end skaermen (Ken Burns) - kompenser,
+     saa coveret faar 5vh luft over og 9vh under i skaerm-koordinater */
+  #ambient .amb-layer .art-fg {
+    position: absolute;
+    top: calc(3vw + 5vh);
+    left: 3vw;
+    width: calc(100% - 6vw);
+    height: calc(100% - 6vw - 14vh);
+    object-fit: contain;
+    filter: drop-shadow(0 1.5rem 3.5rem rgba(0, 0, 0, 0.7));
+  }
   #ambient .amb-layer video.hero-video {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
@@ -618,11 +637,25 @@ var Ambient = (function () {
     if (spec.node) layer.appendChild(spec.node);
     if (spec.img) {
       var im = new Image();
-      im.className = 'hero-img';
       im.alt = '';
-      im.onload = function () {
-        if (currentKey === key) layer.appendChild(im);
-      };
+      if (spec.imgArt) {
+        // Portraet-cover: sloeret kopi som baggrund, hele vaerket i front
+        im.className = 'art-bg';
+        var fg = new Image();
+        fg.className = 'art-fg';
+        fg.alt = '';
+        im.onload = function () {
+          if (currentKey !== key) return;
+          fg.src = spec.img;
+          layer.appendChild(im);
+          layer.appendChild(fg);
+        };
+      } else {
+        im.className = 'hero-img';
+        im.onload = function () {
+          if (currentKey === key) layer.appendChild(im);
+        };
+      }
       im.src = spec.img; // ved fejl beholdes SVG-scenen
     }
     if (spec.video) {
@@ -1315,6 +1348,7 @@ var retroScreen = makeScreen('retro', function (screen, root) {
       Ambient.show('retro:' + i, {
         svg: sceneSvg(g.scene, 'r' + i),
         img: g.cover,
+        imgArt: true,
         video: urls,
         videoStart: g.start,
         videoMax: 15,
@@ -1336,7 +1370,7 @@ var retroScreen = makeScreen('retro', function (screen, root) {
     if (candidates) {
       play(force, candidates);
     } else {
-      Ambient.show('retro:' + i, { svg: sceneSvg(g.scene, 'r' + i), img: g.cover }, force);
+      Ambient.show('retro:' + i, { svg: sceneSvg(g.scene, 'r' + i), img: g.cover, imgArt: true }, force);
     }
   }
 
