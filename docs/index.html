@@ -171,6 +171,11 @@
     justify-content: center;
     gap: 1.9rem;
   }
+  /* Tom hoejre-kolonne, samme bredde som plakaten - balancerer layoutet,
+     saa skaerm-kolonnen (og dermed videoen) centreres i hele viewporten */
+  #ambient .amb-layer .amb-split .amb-split-spacer {
+    flex: 0 0 26vw;
+  }
   /* Coverets bredde er afstemt efter plakat-kolonnens plads; hoejden
      foelger af 2:3-formatet */
   #ambient .amb-layer .amb-split .amb-split-poster .art-fg {
@@ -199,7 +204,6 @@
   #ambient .amb-layer .amb-split .amb-split-screen {
     flex: 1 1 auto;
     box-sizing: border-box;
-    padding-right: calc(3vw + var(--safe-x));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1013,8 +1017,14 @@ var Ambient = (function () {
       posterHost.className = 'amb-split-poster';
       screenHost = document.createElement('div');
       screenHost.className = 'amb-split-screen';
+      // Tom spacer-kolonne i hoejre side med SAMME bredde som plakaten,
+      // saa den midterste skaerm-kolonne bliver centreret i hele viewporten
+      // (og videoen dermed staar praecist i skaermens midte)
+      var spacerHost = document.createElement('div');
+      spacerHost.className = 'amb-split-spacer';
       splitEl.appendChild(posterHost);
       splitEl.appendChild(screenHost);
+      splitEl.appendChild(spacerHost);
       layer.appendChild(splitEl);
     }
 
