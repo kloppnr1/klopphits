@@ -693,12 +693,14 @@ function retroCoverSvg(g) {
 // Aegte retro-hardware: public domain-fotos (Evan Amos / Vanamo Online
 // Game Museum) hotlinket fra Wikimedia Commons. De haandtegnede covers
 // er fallback pr. celle, hvis et foto ikke kan hentes.
-// Aegte C64-spilcovers fra coverbrowser.com (fuld-blods box art,
+// Aegte C64-spilcovers fra coverbrowsers CDN (fuld-blods box art,
 // passer direkte i 2:3-cellerne). De tegnede covers er fallback.
+// Nye titler: hoejreklik paa et cover paa coverbrowser.com/covers/c64-games,
+// kopier billedadressen og indsaet nummeret fra URL'en herunder.
 function c64CoverUrl(n) {
-  return 'https://www.coverbrowser.com/image/c64-games/' + n + '-1.jpg';
+  return 'https://d29xot63vimef3.cloudfront.net/image/c64-games/' + n + '-1.jpg';
 }
-var RETRO_COVERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+var RETRO_COVERS = [1309, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 function makeRetroWall() {
   var wall = el('div', 'cover-wall retro-wall');
