@@ -65,6 +65,14 @@
     width: 100%; height: 100%;
     object-fit: cover;
   }
+  #ambient .amb-layer video.hero-video {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+  }
+  #ambient .amb-layer video.hero-video.on { opacity: 1; }
   @keyframes slowZoom {
     from { transform: scale(1); }
     to { transform: scale(1.07); }
@@ -80,6 +88,8 @@
     transition: opacity 0.45s ease;
   }
   body.in-section #ambient .amb-dim { opacity: 1; }
+  /* I video-sektionen er selve forhaandsvisningen stjernen - naesten ingen daempning */
+  body[data-screen="videos"] #ambient .amb-dim { opacity: 0.22; }
 
   #app { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
 
@@ -202,6 +212,19 @@
 
   .tile.media-tile { aspect-ratio: 16 / 10; }
   .tile.media-tile .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 3.6rem; }
+  .tile.media-tile video.thumb {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+
+  /* ---- Videoklip: fuldskaerms live-preview, fliser som diskret raekke ---- */
+
+  #screen-videos { justify-content: flex-end; gap: 1.4rem; padding-bottom: 1.6rem; }
+  .vhero { display: flex; flex-direction: column; gap: 0.4rem; }
+  .vhero .vhero-title { font-size: 3.8rem; font-weight: 200; letter-spacing: -0.01em; line-height: 1.05; }
+  .vhero .vhero-meta { font-size: 1.3rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .vrail .tile.media-tile { flex: 0 0 auto; width: 15rem; }
   .tile .caption {
     position: absolute; left: 0; right: 0; bottom: 0;
     padding: 1.8rem 0.9rem 0.65rem;
@@ -584,12 +607,23 @@ var Ambient = (function () {
   var active = 0;
   var currentKey = null;
 
-  // spec: { svg: SVG-fallback, img: valgfri billed-URL (fx Steam hero) }
+  function stopVideo(layer) {
+    var v = layer.querySelector('video');
+    if (v) {
+      v.pause();
+      v.removeAttribute('src');
+      v.load();
+    }
+  }
+
+  // spec: { svg: SVG-fallback, img: billed-URL (fx Steam hero),
+  //         video: video-URL til live-preview (muted loop) }
   function show(key, spec) {
     if (key === currentKey || !spec) return;
     currentKey = key;
     active = 1 - active;
     var layer = layers[active];
+    stopVideo(layer);
     layer.innerHTML = spec.svg || '';
     if (spec.img) {
       var im = new Image();
@@ -600,8 +634,27 @@ var Ambient = (function () {
       };
       im.src = spec.img; // ved fejl beholdes SVG-scenen
     }
+    if (spec.video) {
+      var v = document.createElement('video');
+      v.className = 'hero-video';
+      v.muted = true;
+      v.loop = true;
+      v.autoplay = true;
+      v.playsInline = true;
+      v.setAttribute('playsinline', '');
+      v.addEventListener('playing', function () { v.classList.add('on'); });
+      v.addEventListener('error', function () { v.remove(); }); // SVG-scenen bliver staaende
+      v.src = spec.video;
+      layer.appendChild(v);
+      if (v.play) v.play().catch(function () {});
+    }
     layer.classList.add('visible');
-    layers[1 - active].classList.remove('visible');
+    var hidden = layers[1 - active];
+    hidden.classList.remove('visible');
+    // Stop skjult video naar crossfaden er faerdig (spar baandbredde/batteri)
+    setTimeout(function () {
+      if (!hidden.classList.contains('visible')) stopVideo(hidden);
+    }, 1400);
   }
   return { show: show };
 })();
@@ -618,16 +671,27 @@ var PHOTOS = [
   ['Ferie_Italien.jpg', scene(45, 15, '🍕')], ['IMG_2230.jpg', scene(180, 210, '⛵')]
 ].map(function (p) { return { name: p[0], scene: p[1] }; });
 
+// Sample-videoer fra Googles offentlige testvideo-bucket (gratis at bruge).
+// I den rigtige app er det dine egne klip fra videomappen.
+var VIDEO_CDN = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/';
 var VIDEOS = [
-  ['Sommerferie_2025.mp4', '12:34', scene(200, 45, '🏖️')],
-  ['Foedselsdagssang.mp4', '1:36', scene(330, 300, '🎂')],
-  ['Hunden_i_haven.mp4', '2:23', scene(100, 60, '🐕')],
-  ['Nytaar.mp4', '5:12', scene(260, 230, '🎆')],
-  ['Skitur_GoPro.mp4', '8:41', scene(205, 190, '⛷️')],
-  ['Sejltur.mp4', '7:08', scene(190, 215, '⛵')],
-  ['Koncert.mp4', '3:07', scene(300, 270, '🎸')],
-  ['Julemorgen.mp4', '4:25', scene(0, 350, '🎄')]
-].map(function (v) { return { name: v[0], dur: v[1], scene: v[2] }; });
+  ['Bålaften.mp4', 'ForBiggerBlazes.mp4', scene(24, 350, '🔥')],
+  ['Weekendtur.mp4', 'ForBiggerEscapes.mp4', scene(200, 230, '🏞️')],
+  ['Fødselsdag.mp4', 'ForBiggerFun.mp4', scene(330, 300, '🎂')],
+  ['Køretur.mp4', 'ForBiggerJoyrides.mp4', scene(205, 240, '🚗')],
+  ['Hyggeaften.mp4', 'ForBiggerMeltdowns.mp4', scene(260, 230, '🛋️')],
+  ['Grusvejen.mp4', 'SubaruOutbackOnStreetAndDirt.mp4', scene(95, 60, '🌲')],
+  ['Roadtrip.mp4', 'WeAreGoingOnBullrun.mp4', scene(35, 15, '🛣️')],
+  ['Den nye bil.mp4', 'VolkswagenGTIReview.mp4', scene(215, 250, '🚙')]
+].map(function (v) {
+  return { name: v[0], url: VIDEO_CDN + v[1], scene: v[2], durText: '' };
+});
+
+function formatTime(sec) {
+  sec = Math.max(0, Math.floor(sec || 0));
+  var m = Math.floor(sec / 60), s = sec % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
 
 var STEAM = [
   { name: 'Overcooked', appid: 448510 },
@@ -736,6 +800,7 @@ var Screens = {
     var onHome = top === homeScreen;
     document.body.classList.toggle('on-home', onHome);
     document.body.classList.toggle('in-section', !onHome);
+    document.body.dataset.screen = top ? top.el.id.replace('screen-', '') : '';
   },
   handle: function (action) {
     var top = this.top();
@@ -787,6 +852,8 @@ var homeScreen = makeScreen('home', function (screen, root) {
   });
   focus.setItems(cards);
 
+  var homeVideoTimer = null;
+
   function syncHero(animate) {
     var m = MENU[focus.index];
     heroTitle.textContent = m.label;
@@ -795,6 +862,13 @@ var homeScreen = makeScreen('home', function (screen, root) {
       svg: HEROES[m.id],
       img: m.id === 'steam' ? steamHeroUrl(STEAM[0].appid) : undefined
     });
+    // Hviler man paa Videoklip, starter en live-preview af foerste klip
+    clearTimeout(homeVideoTimer);
+    if (m.id === 'videos') {
+      homeVideoTimer = setTimeout(function () {
+        Ambient.show('videos-live', { svg: HEROES.videos, video: VIDEOS[0].url });
+      }, 700);
+    }
     if (animate) {
       hero.classList.remove('swap');
       void hero.offsetWidth; // genstart animationen
@@ -888,19 +962,93 @@ var photosScreen = makeSection('photos', 'Billeder', PHOTOS.length + ' filer · 
   Ambient.show('photos:' + index, { svg: sceneSvg(PHOTOS[index].scene, 'p' + index) });
 });
 
-var videosScreen = makeSection('videos', 'Videoklip', VIDEOS.length + ' filer · /home/klopp/Videoer', 4, function (grid) {
-  return VIDEOS.map(function (item) {
+// Videoklip: hele skaermen er en live-preview af det fokuserede klip.
+// Fliserne er kun en diskret raekke i bunden (Apple TV-stil).
+var videosScreen = makeScreen('videos', function (screen, root) {
+  var back = el('div', 'back-pill');
+  back.appendChild(el('span', null, '‹'));
+  back.appendChild(el('span', null, 'Hjem'));
+  back.addEventListener('click', function () { Screens.pop(); });
+  root.appendChild(back);
+
+  var hero = el('div', 'vhero');
+  var vTitle = el('div', 'vhero-title');
+  var vMeta = el('div', 'vhero-meta');
+  hero.appendChild(vTitle);
+  hero.appendChild(vMeta);
+  root.appendChild(hero);
+
+  var rail = el('div', 'rail vrail');
+  root.appendChild(rail);
+
+  var focus = new Grid(VIDEOS.length);
+  var previewTimer = null;
+
+  var tiles = VIDEOS.map(function (item, i) {
     var tile = el('div', 'tile media-tile');
     var ph = el('div', 'ph', item.scene.emoji);
     ph.style.background = item.scene.bg;
     tile.appendChild(ph);
-    tile.appendChild(el('div', 'duration', item.dur));
+
+    var thumb = document.createElement('video');
+    thumb.className = 'thumb';
+    thumb.muted = true;
+    thumb.preload = 'metadata';
+    thumb.addEventListener('loadedmetadata', function () {
+      item.durText = formatTime(thumb.duration);
+      var badge = tile.querySelector('.duration');
+      if (badge) badge.textContent = item.durText;
+      if (focus.index === i) syncHero();
+    });
+    thumb.addEventListener('error', function () { thumb.remove(); });
+    thumb.src = item.url + '#t=0.5';
+    tile.appendChild(thumb);
+
+    tile.appendChild(el('div', 'duration', ''));
     tile.appendChild(el('div', 'caption', item.name));
-    grid.appendChild(tile);
+    rail.appendChild(tile);
     return tile;
   });
-}, function (index) {
-  Ambient.show('videos:' + index, { svg: sceneSvg(VIDEOS[index].scene, 'v' + index) });
+  focus.setItems(tiles);
+
+  function syncHero() {
+    var item = VIDEOS[focus.index];
+    vTitle.textContent = item.name;
+    vMeta.textContent = (focus.index + 1) + ' / ' + VIDEOS.length +
+      (item.durText ? ' · ' + item.durText : '') + ' · sample-video (demo)';
+  }
+
+  // Kort dvale foer preview starter, saa hurtig scrolling ikke spilder baandbredde
+  function focusChanged() {
+    syncHero();
+    clearTimeout(previewTimer);
+    var i = focus.index;
+    previewTimer = setTimeout(function () {
+      Ambient.show('videos:' + i, {
+        svg: sceneSvg(VIDEOS[i].scene, 'v' + i),
+        video: VIDEOS[i].url
+      });
+    }, 450);
+  }
+
+  tiles.forEach(function (tile) {
+    tapToFocus(focus, tile, conceptToast, focusChanged);
+  });
+
+  screen.enter = function () {
+    focus.index = 0;
+    focus.applyFocus(false);
+    focusChanged();
+  };
+  screen.onInput = function (action) {
+    if (action === 'left' || action === 'up') { if (focus.move('left')) focusChanged(); }
+    else if (action === 'right' || action === 'down') { if (focus.move('right')) focusChanged(); }
+    else if (action === 'a') conceptToast();
+    else if (action === 'b') {
+      clearTimeout(previewTimer);
+      Screens.pop();
+    }
+  };
 });
 
 var steamScreen = makeSection('steam', 'Steam', STEAM.length + ' installerede spil · live artwork fra Steam', 5, function (grid) {
