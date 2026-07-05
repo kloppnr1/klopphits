@@ -104,7 +104,6 @@
   }
   #logo { font-size: 1.9rem; font-weight: 700; letter-spacing: 0.05em; }
   #logo span { color: var(--accent); }
-  #clock { font-size: 1.8rem; font-weight: 300; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 
   /* ---- Skaerme ---- */
 
@@ -316,45 +315,6 @@
   }
   .hidden { opacity: 0; pointer-events: none; }
 
-  /* ---- Touch: tilbage-knap ---- */
-
-  .back-pill {
-    display: inline-flex; align-items: center; gap: 0.6rem;
-    align-self: flex-start;
-    margin-top: 1.2rem;
-    padding: 0.5rem 1.3rem;
-    border-radius: 999px;
-    background: rgba(25, 28, 34, 0.85);
-    border: 1px solid var(--line);
-    color: var(--text-dim);
-    font-size: 1.15rem; font-weight: 600;
-    cursor: pointer;
-  }
-  .back-pill:active { outline: var(--focus-width) solid var(--accent); color: var(--text); }
-
-  /* ---- Intro ---- */
-
-  #intro {
-    position: fixed; inset: 0; z-index: 80;
-    background: rgba(10, 12, 15, 0.86);
-    display: flex; align-items: center; justify-content: center;
-  }
-  #intro.gone { display: none; }
-  #intro .intro-card {
-    background: var(--panel); border: 1px solid var(--line);
-    border-radius: 1.4rem; padding: 2.4rem 2.8rem; max-width: 42rem;
-    display: flex; flex-direction: column; gap: 1rem;
-    box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.6);
-  }
-  #intro h1 { font-size: 1.9rem; font-weight: 700; letter-spacing: 0.05em; }
-  #intro h1 span { color: var(--accent); }
-  #intro p { font-size: 1.2rem; color: var(--text-dim); line-height: 1.55; max-width: 55ch; }
-  #intro .go { font-size: 1.25rem; font-weight: 700; color: #9ed4ac; margin-top: 0.4rem; }
-  kbd {
-    background: var(--bg-soft); border: 1px solid var(--line); border-radius: 0.45rem;
-    padding: 0.1rem 0.55rem; font-family: inherit; font-size: 1rem; font-weight: 700;
-  }
-
   /* ---- Mobil/portraet: forhaandsvisning af TV-konceptet ---- */
 
   @media (orientation: portrait) {
@@ -373,18 +333,9 @@
 <div id="app">
   <header id="topbar">
     <div id="logo">klopp<span>hits</span></div>
-    <div id="clock"></div>
   </header>
   <main id="screens"></main>
   <div id="toast" class="hidden"></div>
-</div>
-
-<div id="intro">
-  <div class="intro-card">
-    <h1>klopp<span>hits</span> · koncept-UI</h1>
-    <p>Kun stil og primær navigation — ingen funktioner. Hver sektion fylder hele skærmen med sit eget baggrundsbillede (i den rigtige app: dine billeder og Steam-covers). Controller: D-pad/stik, A = åbn, B = tilbage. Tastatur: <kbd>piletaster</kbd>, <kbd>Enter</kbd>, <kbd>Esc</kbd>. Touch: tryk for at vælge, tryk igen for at åbne, ‹ Hjem går tilbage.</p>
-    <div class="go">Tryk hvor som helst for at starte</div>
-  </div>
 </div>
 
 <script>
@@ -913,12 +864,6 @@ function conceptToast() {
 
 function makeSection(id, title, subtitle, cols, buildTiles, onFocusChange) {
   return makeScreen(id, function (screen, root) {
-    var back = el('div', 'back-pill');
-    back.appendChild(el('span', null, '‹'));
-    back.appendChild(el('span', null, 'Hjem'));
-    back.addEventListener('click', function () { Screens.pop(); });
-    root.appendChild(back);
-
     root.appendChild(el('h2', 'screen-title', title));
     root.appendChild(el('p', 'screen-subtitle', subtitle));
     var area = el('div', 'scroll-area');
@@ -968,12 +913,6 @@ var photosScreen = makeSection('photos', 'Billeder', PHOTOS.length + ' filer · 
 // Videoklip: hele skaermen er en live-preview af det fokuserede klip.
 // Fliserne er kun en diskret raekke i bunden (Apple TV-stil).
 var videosScreen = makeScreen('videos', function (screen, root) {
-  var back = el('div', 'back-pill');
-  back.appendChild(el('span', null, '‹'));
-  back.appendChild(el('span', null, 'Hjem'));
-  back.addEventListener('click', function () { Screens.pop(); });
-  root.appendChild(back);
-
   var hero = el('div', 'vhero');
   var vTitle = el('div', 'vhero-title');
   var vMeta = el('div', 'vhero-meta');
@@ -1161,27 +1100,15 @@ var Input = (function () {
 })();
 
 // ============================================================================
-// Ur + opstart
+// Opstart
 // ============================================================================
 
-function updateClock() {
-  document.getElementById('clock').textContent =
-    new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
-}
-updateClock();
-setInterval(updateClock, 15000);
+// Touch: et tryk paa logoet gaar tilbage til forsiden
+document.getElementById('logo').addEventListener('click', function () {
+  while (Screens.stack.length > 1) Screens.pop();
+});
 
-var introOpen = true;
-function dismissIntro() {
-  introOpen = false;
-  document.getElementById('intro').classList.add('gone');
-}
-document.getElementById('intro').addEventListener('click', dismissIntro);
 Input.on(function (action) {
-  if (introOpen) {
-    if (action === 'a' || action === 'b') dismissIntro();
-    return;
-  }
   Screens.handle(action);
 });
 
