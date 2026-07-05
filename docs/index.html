@@ -156,28 +156,27 @@
     position: absolute; inset: 0;
     z-index: 3;
     display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding-top: calc(6vh + var(--safe-y));
   }
-  /* Plakaten (cover/titel/knap) er taget ud af flex-floedet og sat fast
-     i venstre side, saa videoen alene kan staa centreret paa skaermen -
-     ikke centreret som et par sammen med plakaten */
+  /* Plakat-kolonnen har en FAST bredde, saa den altid reserverer sin
+     egen plads - skaerm-kolonnen kan derfor aldrig overlappe den,
+     uanset skaermstoerrelse. Indhold er venstrejusteret og lodret
+     centreret i kolonnen */
   #ambient .amb-layer .amb-split .amb-split-poster {
-    position: absolute;
-    top: calc(6vh + var(--safe-y));
-    left: calc(3vw + var(--safe-x));
+    flex: 0 0 26vw;
+    box-sizing: border-box;
+    padding-left: calc(3vw + var(--safe-x));
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    justify-content: center;
     gap: 1.9rem;
   }
-  /* Coverets hoejde er sat, saa cover + tekst + knap TILSAMMEN faar
-     samme hoejde som videoen ved siden af - ikke coveret alene */
+  /* Coverets bredde er afstemt efter plakat-kolonnens plads; hoejden
+     foelger af 2:3-formatet */
   #ambient .amb-layer .amb-split .amb-split-poster .art-fg {
     position: static;
-    height: calc(70vh - 11.8rem);
-    width: auto;
+    width: min(100%, 15vw);
+    height: auto;
     aspect-ratio: 2 / 3;
     object-fit: contain;
     background: #0d0b10;
@@ -188,20 +187,31 @@
   }
   #ambient .amb-layer .amb-split .amb-caption {
     position: static;
-    max-width: 26vh;
+    max-width: 100%;
     text-align: left;
     text-shadow: none;
   }
-  #ambient .amb-layer .amb-split .amb-caption .amb-caption-title { font-size: 2.9rem; }
-  #ambient .amb-layer .amb-split .amb-caption .amb-caption-sub { font-size: 1.4rem; margin-top: 0.5rem; }
-  #ambient .amb-layer .amb-split .amb-split-screen { flex: 0 0 auto; }
+  #ambient .amb-layer .amb-split .amb-caption .amb-caption-title { font-size: 2.6rem; }
+  #ambient .amb-layer .amb-split .amb-caption .amb-caption-sub { font-size: 1.3rem; margin-top: 0.5rem; }
+  /* Skaerm-kolonnen faar resten af pladsen og centrerer videoen baade
+     lodret og vandret indeni sig selv - kan matematisk ikke overlappe
+     plakat-kolonnen, da de er ligestillede flex-elementer */
+  #ambient .amb-layer .amb-split .amb-split-screen {
+    flex: 1 1 auto;
+    box-sizing: border-box;
+    padding-right: calc(3vw + var(--safe-x));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
   /* CRT-rammen droppet for split-layoutet - rent skaermpanel i stedet.
      Videoen er den centrerede hovedgenstand paa siden og er gjort stoerre
      end plakaten. Altid synligt (ikke afhaengigt af 'on'), saa
-     loadeskaermen indeni kan ses foer videoen er klar */
+     loadeskaermen indeni kan ses foer videoen er klar. Stoerrelsen er
+     et loft (min), saa den aldrig bliver bredere end skaerm-kolonnen */
   #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen {
     position: relative;
-    height: 70vh;
+    height: min(70vh, 60vw);
     aspect-ratio: 4 / 3;
     background: #000;
     border-radius: 1rem;
@@ -377,6 +387,16 @@
     width: 100%; height: 100%;
   }
   .cover-wall.retro-wall { background: #0a0612; }
+  .cover-wall.video-wall { background: #05070a; }
+  .cover-wall.video-wall .cw { aspect-ratio: 16 / 10; }
+  .cover-wall .cw video {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .cover-wall .cw video.on { opacity: 1; }
   @keyframes slowZoom {
     from { transform: scale(1); }
     to { transform: scale(1.07); }
@@ -586,6 +606,13 @@
     object-fit: cover;
   }
 
+  /* ---- Videoklip: fuldskaerms live-preview, fliser som diskret raekke ---- */
+
+  #screen-videos { justify-content: flex-end; gap: 1.4rem; padding-bottom: 1.6rem; }
+  .vhero { display: flex; flex-direction: column; gap: 0.4rem; }
+  .vhero .vhero-title { font-size: 3.8rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.05; }
+  .vhero .vhero-meta { font-size: 1.3rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .vrail .tile.media-tile { flex: 0 0 auto; width: 15rem; }
   .tile.media-tile img.thumb {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
@@ -776,6 +803,19 @@ function stars(seedX, count, yMax, color) {
     out += '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="' + color + '" opacity="' + o + '"/>';
   }
   return out;
+}
+
+// Fuldskaerms-scene for et enkelt element (i den rigtige app: selve billedet)
+function sceneSvg(s, uid) {
+  return SVG_OPEN +
+    '<defs><linearGradient id="sc-' + uid + '" x1="0" y1="0" x2="1" y2="1">' +
+    '<stop offset="0" stop-color="hsl(' + s.h1 + ' 30% 36%)"/>' +
+    '<stop offset="1" stop-color="hsl(' + s.h2 + ' 34% 12%)"/></linearGradient>' +
+    '<radialGradient id="scg-' + uid + '"><stop offset="0" stop-color="hsl(' + s.h1 + ' 60% 70%)" stop-opacity="0.32"/><stop offset="1" stop-color="hsl(' + s.h1 + ' 60% 70%)" stop-opacity="0"/></radialGradient></defs>' +
+    '<rect width="1920" height="1080" fill="url(#sc-' + uid + ')"/>' +
+    '<ellipse cx="1250" cy="420" rx="720" ry="440" fill="url(#scg-' + uid + ')"/>' +
+    '<text x="960" y="710" font-size="430" text-anchor="middle" opacity="0.3">' + s.emoji + '</text>' +
+    '</svg>';
 }
 
 var HEROES = {
@@ -1285,6 +1325,32 @@ function c64CoverUrl(n) {
 }
 var RETRO_COVERS = [1309, 1420, 4, 218, 1, 2, 3, 5, 6, 7];
 
+// Vaeg af levende klip til hjemmeskaermens Videoklip-kort - samme
+// gitter-stil som cover-vaeggene, men hver celle er en rigtig video
+// (muted, loop, autoplay) i stedet for et stillbillede
+function makeVideoWall() {
+  var wall = el('div', 'cover-wall video-wall');
+  VIDEOS.forEach(function (item) {
+    var cell = el('div', 'cw');
+    var vid = document.createElement('video');
+    vid.muted = true;
+    vid.loop = true;
+    vid.autoplay = true;
+    vid.playsInline = true;
+    vid.setAttribute('muted', '');
+    vid.setAttribute('autoplay', '');
+    vid.setAttribute('loop', '');
+    vid.setAttribute('playsinline', '');
+    vid.addEventListener('playing', function () { vid.classList.add('on'); });
+    vid.addEventListener('error', function () { vid.remove(); });
+    vid.src = item.url;
+    if (vid.play) vid.play().catch(function () {});
+    cell.appendChild(vid);
+    wall.appendChild(cell);
+  });
+  return wall;
+}
+
 function makeRetroWall() {
   var wall = el('div', 'cover-wall retro-wall');
   RETRO_WALL.forEach(function (g, i) {
@@ -1553,7 +1619,7 @@ var homeScreen = makeScreen('home', function (screen, root) {
     // Hjemmeskaermen er rolig: kun statiske heroes - previews koerer i sektionerne
     Ambient.show(m.id, {
       svg: HEROES[m.id],
-      node: m.id === 'steam' ? makeCoverWall() : (m.id === 'retro' ? makeRetroWall() : undefined)
+      node: m.id === 'steam' ? makeCoverWall() : (m.id === 'retro' ? makeRetroWall() : (m.id === 'videos' ? makeVideoWall() : undefined))
     });
     if (animate) {
       hero.classList.remove('swap');
@@ -1632,46 +1698,95 @@ function makeSection(id, title, subtitle, cols, buildTiles, onFocusChange, onSel
 
 // Videoklip: hele skaermen er en live-preview af det fokuserede klip.
 // Fliserne er kun en diskret raekke i bunden (Apple TV-stil).
-// Videoklip: samme flisegitter som Steam og Retro. Hver flise ER en
-// video (muted, loop, autoplay) i stedet for et stillbillede - hele
-// gitteret lever, ligesom en vaeg af levende miniaturer.
-var videosScreen = makeSection('videos', 'Videoklip',
-  VIDEOS.length + ' videoklip · hvert kort spiller direkte', 5,
-  function (grid) {
-    return VIDEOS.map(function (item) {
-      var tile = el('div', 'tile media-tile video-tile');
-      var ph = el('div', 'ph', item.scene.emoji);
-      ph.style.background = item.scene.bg;
-      tile.appendChild(ph);
+var videosScreen = makeScreen('videos', function (screen, root) {
+  var hero = el('div', 'vhero');
+  var vTitle = el('div', 'vhero-title');
+  var vMeta = el('div', 'vhero-meta');
+  hero.appendChild(vTitle);
+  hero.appendChild(vMeta);
+  root.appendChild(hero);
 
-      var vid = document.createElement('video');
-      vid.className = 'thumb';
-      vid.muted = true;
-      vid.loop = true;
-      vid.autoplay = true;
-      vid.playsInline = true;
-      vid.setAttribute('muted', '');
-      vid.setAttribute('autoplay', '');
-      vid.setAttribute('loop', '');
-      vid.setAttribute('playsinline', '');
-      vid.poster = item.poster;
-      vid.addEventListener('error', function () { vid.remove(); });
-      vid.src = item.url;
-      if (vid.play) vid.play().catch(function () {});
-      tile.appendChild(vid);
+  var rail = el('div', 'rail vrail');
+  root.appendChild(rail);
 
-      tile.appendChild(el('div', 'duration', item.durText));
-      tile.appendChild(el('div', 'caption', item.name));
-      grid.appendChild(tile);
-      return tile;
-    });
-  },
-  function () {
-    // Statisk baggrund - gitterets levende fliser er stjernen, ikke en
-    // hero-video bag dem
-    Ambient.show('videos-grid', { svg: HEROES.videos });
+  var focus = new Grid(VIDEOS.length);
+  var previewTimer = null;
+
+  var tiles = VIDEOS.map(function (item, i) {
+    var tile = el('div', 'tile media-tile');
+    var ph = el('div', 'ph', item.scene.emoji);
+    ph.style.background = item.scene.bg;
+    tile.appendChild(ph);
+
+    var thumb = el('img', 'thumb');
+    thumb.alt = '';
+    thumb.loading = 'lazy';
+    thumb.addEventListener('error', function () { thumb.remove(); });
+    thumb.src = item.poster;
+    tile.appendChild(thumb);
+
+    tile.appendChild(el('div', 'duration', item.durText));
+    tile.appendChild(el('div', 'caption', item.name));
+    rail.appendChild(tile);
+    return tile;
+  });
+  focus.setItems(tiles);
+
+  function syncHero() {
+    var item = VIDEOS[focus.index];
+    vTitle.textContent = item.name;
+    vMeta.textContent = (focus.index + 1) + ' / ' + VIDEOS.length +
+      (item.durText ? ' · ' + item.durText : '') + ' · sample-video (demo)';
   }
-);
+
+  function showPreview(force) {
+    var i = focus.index;
+    Ambient.show('videos:' + i, {
+      svg: sceneSvg(VIDEOS[i].scene, 'v' + i),
+      img: VIDEOS[i].poster,
+      video: VIDEOS[i].url
+    }, force);
+  }
+
+  // Kort dvale foer preview starter, saa hurtig scrolling ikke spilder baandbredde
+  function focusChanged() {
+    document.body.classList.remove('cinema'); // UI straks tilbage ved navigation
+    syncHero();
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(function () {
+      if (document.body.dataset.screen === 'videos') showPreview();
+    }, 450);
+  }
+
+  // A: stop en koerende preview, eller start den fokuserede med det samme
+  function pressA() {
+    if (Ambient.isPreviewing()) {
+      Ambient.stopPreview();
+    } else {
+      clearTimeout(previewTimer);
+      showPreview(true);
+    }
+  }
+
+  tiles.forEach(function (tile) {
+    tapToFocus(focus, tile, pressA, focusChanged);
+  });
+
+  screen.enter = function () {
+    focus.index = 0;
+    focus.applyFocus(false);
+    focusChanged();
+  };
+  screen.onInput = function (action) {
+    if (action === 'left' || action === 'up') { if (focus.move('left')) focusChanged(); }
+    else if (action === 'right' || action === 'down') { if (focus.move('right')) focusChanged(); }
+    else if (action === 'a') pressA();
+    else if (action === 'b') {
+      clearTimeout(previewTimer);
+      Screens.pop();
+    }
+  };
+});
 
 var steamScreen = makeSection('steam', 'Steam', STEAM.length + ' installerede spil · live artwork fra Steam', 5, function (grid) {
   return STEAM.map(function (game) {
