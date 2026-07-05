@@ -113,16 +113,9 @@
 
   /* ---- Hjem: fuldskaerms hero + pille-navigation ---- */
 
-  #screen-home { justify-content: flex-end; gap: 2.6rem; padding-bottom: 2rem; }
+  #screen-home { justify-content: flex-end; gap: 2.6rem; padding-bottom: 2.4rem; }
 
   .hero { display: flex; flex-direction: column; gap: 0.9rem; }
-  .hero .eyebrow {
-    font-size: 1.25rem;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-  }
   .hero .hero-title {
     font-size: 6.4rem;
     font-weight: 200;
@@ -237,10 +230,25 @@
   .tile.steam-tile .big-letter { font-size: 4rem; font-weight: 700; color: var(--accent); }
   .tile.steam-tile .name { font-size: 1.25rem; font-weight: 600; color: var(--text-dim); }
 
-  .tile.retro-tile { padding: 2rem 2rem 1.8rem; display: flex; flex-direction: column; gap: 0.8rem; min-height: 11rem; }
-  .tile.retro-tile .name { font-size: 1.65rem; font-weight: 650; display: flex; align-items: center; gap: 1rem; }
-  .tile.retro-tile .name svg { width: 1.7rem; height: 1.7rem; color: var(--accent); }
-  .tile.retro-tile .desc { font-size: 1.25rem; color: var(--text-dim); line-height: 1.45; }
+  .tile .caption .cap-sub {
+    display: block;
+    font-size: 0.98rem;
+    font-weight: 400;
+    color: var(--text-dim);
+    margin-top: 0.2rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tile.settings-tile {
+    aspect-ratio: 16 / 10;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 1rem; text-align: center; padding: 1.5rem;
+  }
+  .tile.settings-tile .icon-wrap svg { width: 3.2rem; height: 3.2rem; color: var(--accent); }
+  .tile.settings-tile .label { font-size: 1.45rem; font-weight: 650; }
+  .tile.settings-tile .value { font-size: 1.1rem; color: var(--text-dim); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   .rows { display: flex; flex-direction: column; gap: 1rem; max-width: 75rem; }
   .row-item {
@@ -261,15 +269,8 @@
   .row-item .row-label svg { width: 1.7rem; height: 1.7rem; color: var(--accent); }
   .row-item .row-value { font-size: 1.25rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  /* ---- Knap-hints ---- */
+  /* ---- Knap-badges (bruges i intro-kortet) ---- */
 
-  #hints {
-    flex: 0 0 auto;
-    display: flex; gap: 2.4rem; justify-content: center;
-    padding: 1rem 0 var(--safe-y);
-    font-size: 1.25rem; color: var(--text-dim);
-  }
-  #hints .hint { display: flex; align-items: center; gap: 0.7rem; }
   .btn {
     display: inline-flex; align-items: center; justify-content: center;
     min-width: 2.2rem; height: 2.2rem; padding: 0 0.65rem;
@@ -336,7 +337,6 @@
   @media (orientation: portrait) {
     .grid { grid-template-columns: repeat(2, 1fr) !important; }
     .hero .hero-title { font-size: 4rem; }
-    #hints { display: none; }
     #screen-home { padding-bottom: 1.4rem; }
   }
 
@@ -353,7 +353,6 @@
     <div id="clock"></div>
   </header>
   <main id="screens"></main>
-  <footer id="hints"></footer>
   <div id="toast" class="hidden"></div>
 </div>
 
@@ -409,20 +408,11 @@ function toast(msg) {
   toastTimer = setTimeout(function () { t.classList.add('hidden'); }, 2400);
 }
 
-function setHints(hints) {
-  var bar = document.getElementById('hints');
-  bar.innerHTML = '';
-  hints.forEach(function (h) {
-    var wrap = el('div', 'hint');
-    wrap.appendChild(el('span', 'btn btn-' + h[0].toLowerCase(), h[0]));
-    wrap.appendChild(el('span', null, h[1]));
-    bar.appendChild(wrap);
-  });
-}
-
 function scene(hue1, hue2, emoji) {
   return {
     bg: 'linear-gradient(150deg, hsl(' + hue1 + ' 28% 34%) 0%, hsl(' + hue2 + ' 32% 14%) 85%)',
+    h1: hue1,
+    h2: hue2,
     emoji: emoji
   };
 }
@@ -445,6 +435,19 @@ function stars(seedX, count, yMax, color) {
     out += '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="' + color + '" opacity="' + o + '"/>';
   }
   return out;
+}
+
+// Fuldskaerms-scene for et enkelt element (i den rigtige app: selve billedet)
+function sceneSvg(s, uid) {
+  return SVG_OPEN +
+    '<defs><linearGradient id="sc-' + uid + '" x1="0" y1="0" x2="1" y2="1">' +
+    '<stop offset="0" stop-color="hsl(' + s.h1 + ' 30% 36%)"/>' +
+    '<stop offset="1" stop-color="hsl(' + s.h2 + ' 34% 12%)"/></linearGradient>' +
+    '<radialGradient id="scg-' + uid + '"><stop offset="0" stop-color="hsl(' + s.h1 + ' 60% 70%)" stop-opacity="0.32"/><stop offset="1" stop-color="hsl(' + s.h1 + ' 60% 70%)" stop-opacity="0"/></radialGradient></defs>' +
+    '<rect width="1920" height="1080" fill="url(#sc-' + uid + ')"/>' +
+    '<ellipse cx="1250" cy="420" rx="720" ry="440" fill="url(#scg-' + uid + ')"/>' +
+    '<text x="960" y="710" font-size="430" text-anchor="middle" opacity="0.3">' + s.emoji + '</text>' +
+    '</svg>';
 }
 
 var HEROES = {
@@ -640,10 +643,10 @@ var STEAM = [
 ];
 
 var RETRO = [
-  { name: 'Internet Arcade', desc: 'Klassiske arkadespil i browseren' },
-  { name: 'Console Living Room', desc: 'Retro konsolspil fra 70’erne og 80’erne' },
-  { name: 'MS-DOS Games', desc: 'Tusindvis af DOS-spil' },
-  { name: 'itch.io', desc: 'Gratis indie- og retrospil' }
+  { name: 'Internet Arcade', desc: 'Klassiske arkadespil i browseren', scene: scene(286, 320, '🕹️') },
+  { name: 'Console Living Room', desc: 'Retro konsolspil fra 70’erne og 80’erne', scene: scene(262, 300, '📺') },
+  { name: 'MS-DOS Games', desc: 'Tusindvis af DOS-spil', scene: scene(214, 252, '💾') },
+  { name: 'itch.io', desc: 'Gratis indie- og retrospil', scene: scene(322, 356, '👾') }
 ];
 
 // ============================================================================
@@ -730,7 +733,6 @@ var Screens = {
   top: function () { return this.stack[this.stack.length - 1] || null; },
   refresh: function () {
     var top = this.top();
-    setHints(top && top.hints ? top.hints() : []);
     var onHome = top === homeScreen;
     document.body.classList.toggle('on-home', onHome);
     document.body.classList.toggle('in-section', !onHome);
@@ -763,24 +765,10 @@ var MENU = [
   { id: 'settings', icon: 'settings', label: 'Indstillinger', desc: 'Mapper, kilder og program.' }
 ];
 
-function greetingText() {
-  var h = new Date().getHours();
-  if (h >= 5 && h < 10) return 'Godmorgen';
-  if (h >= 10 && h < 18) return 'Goddag';
-  return 'Godaften';
-}
-
-function dateText() {
-  var s = new Date().toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 var homeScreen = makeScreen('home', function (screen, root) {
   var hero = el('div', 'hero');
-  var eyebrow = el('div', 'eyebrow', greetingText() + ' · ' + dateText());
   var heroTitle = el('div', 'hero-title');
   var heroDesc = el('div', 'hero-desc');
-  hero.appendChild(eyebrow);
   hero.appendChild(heroTitle);
   hero.appendChild(heroDesc);
   root.appendChild(hero);
@@ -829,7 +817,6 @@ var homeScreen = makeScreen('home', function (screen, root) {
 
   screen.enter = function () { focus.applyFocus(false); syncHero(false); };
   screen.resume = function () { syncHero(false); };
-  screen.hints = function () { return [['A', 'Åbn'], ['✚', 'Navigér']]; };
   screen.onInput = function (action) {
     if (action === 'left' || action === 'up') { if (focus.move('left')) syncHero(true); }
     else if (action === 'right' || action === 'down') { if (focus.move('right')) syncHero(true); }
@@ -877,7 +864,6 @@ function makeSection(id, title, subtitle, cols, buildTiles, onFocusChange) {
     });
 
     screen.enter = function () { focus.index = 0; focus.applyFocus(false); focusChanged(); };
-    screen.hints = function () { return [['A', 'Åbn'], ['B', 'Hjem'], ['✚', 'Navigér']]; };
     screen.onInput = function (action) {
       if (['up', 'down', 'left', 'right'].indexOf(action) !== -1) {
         if (focus.move(action)) focusChanged();
@@ -898,6 +884,8 @@ var photosScreen = makeSection('photos', 'Billeder', PHOTOS.length + ' filer · 
     grid.appendChild(tile);
     return tile;
   });
+}, function (index) {
+  Ambient.show('photos:' + index, { svg: sceneSvg(PHOTOS[index].scene, 'p' + index) });
 });
 
 var videosScreen = makeSection('videos', 'Videoklip', VIDEOS.length + ' filer · /home/klopp/Videoer', 4, function (grid) {
@@ -911,6 +899,8 @@ var videosScreen = makeSection('videos', 'Videoklip', VIDEOS.length + ' filer ·
     grid.appendChild(tile);
     return tile;
   });
+}, function (index) {
+  Ambient.show('videos:' + index, { svg: sceneSvg(VIDEOS[index].scene, 'v' + index) });
 });
 
 var steamScreen = makeSection('steam', 'Steam', STEAM.length + ' installerede spil · live artwork fra Steam', 5, function (grid) {
@@ -934,34 +924,33 @@ var steamScreen = makeSection('steam', 'Steam', STEAM.length + ' installerede sp
   Ambient.show('steam:' + game.appid, { svg: HEROES.steam, img: steamHeroUrl(game.appid) });
 });
 
-var retroScreen = makeSection('retro', 'Retro spil', 'Online retro-spil i fuld skærm', 2, function (grid) {
+var retroScreen = makeSection('retro', 'Retro spil', 'Online retro-spil i fuld skærm', 3, function (grid) {
   return RETRO.map(function (site) {
-    var tile = el('div', 'tile retro-tile');
-    var name = el('div', 'name');
-    name.appendChild(icon('retro'));
-    name.appendChild(el('span', null, site.name));
-    tile.appendChild(name);
-    tile.appendChild(el('div', 'desc', site.desc));
+    var tile = el('div', 'tile media-tile');
+    var ph = el('div', 'ph', site.scene.emoji);
+    ph.style.background = site.scene.bg;
+    tile.appendChild(ph);
+    var cap = el('div', 'caption', site.name);
+    cap.appendChild(el('span', 'cap-sub', site.desc));
+    tile.appendChild(cap);
     grid.appendChild(tile);
     return tile;
   });
 });
 
-var settingsScreen = makeSection('settings', 'Indstillinger', 'Mapper, kilder og program', 1, function (rows) {
+var settingsScreen = makeSection('settings', 'Indstillinger', 'Mapper, kilder og program', 3, function (grid) {
   var defs = [
     { icon: 'photos', label: 'Billedmappe', value: '/home/klopp/Billeder' },
     { icon: 'videos', label: 'Videomappe', value: '/home/klopp/Videoer' },
     { icon: 'power', label: 'Afslut KloppHits', value: '' }
   ];
   return defs.map(function (d) {
-    var row = el('div', 'row-item');
-    var lab = el('div', 'row-label');
-    lab.appendChild(icon(d.icon));
-    lab.appendChild(el('span', null, d.label));
-    row.appendChild(lab);
-    row.appendChild(el('div', 'row-value', d.value));
-    rows.appendChild(row);
-    return row;
+    var tile = el('div', 'tile settings-tile');
+    tile.appendChild(icon(d.icon));
+    tile.appendChild(el('div', 'label', d.label));
+    if (d.value) tile.appendChild(el('div', 'value', d.value));
+    grid.appendChild(tile);
+    return tile;
   });
 });
 
