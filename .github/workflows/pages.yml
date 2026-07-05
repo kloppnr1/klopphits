@@ -15,9 +15,13 @@ permissions:
   pages: write
   id-token: write
 
+# Følg GitHubs officielle Pages-anbefaling: annullér IKKE igangvaerende
+# deploys. cancel-in-progress: true kunne afbryde et upload-step midt i
+# og efterlade to "github-pages"-artefakter, som deploy-pages saa naegter
+# at vaelge imellem ("Multiple artifacts named github-pages ...").
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
