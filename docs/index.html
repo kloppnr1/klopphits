@@ -268,7 +268,7 @@
   body.in-section #ambient .amb-dim { opacity: 1; }
   /* Hvor forhaandsvisningen er stjernen: naesten ingen daempning */
   body[data-screen="videos"] #ambient .amb-dim,
-  body[data-screen="retro"] #ambient .amb-dim { opacity: 0.16; }
+  body[data-screen="retro-play"] #ambient .amb-dim { opacity: 0.16; }
   /* Biograf: videoen staar helt ren - vignet og daempning fader vaek */
   #ambient .amb-vignette { transition: opacity 0.45s ease; }
   body.cinema #ambient .amb-vignette { opacity: 0; }
@@ -464,8 +464,6 @@
   .vhero .vhero-title { font-size: 3.8rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.05; }
   .vhero .vhero-meta { font-size: 1.3rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
   .vrail .tile.media-tile { flex: 0 0 auto; width: 15rem; }
-  /* Retro-railen bruger 2:3-kassetteformat, saa box art passer perfekt */
-  .vrail.retro-rail .tile.media-tile { width: 10.5rem; aspect-ratio: 2 / 3; }
   .tile.media-tile img.thumb {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
@@ -1285,7 +1283,7 @@ function makeScreen(id, build) {
 var MENU = [
   { id: 'videos', icon: 'videos', label: 'Videoklip', desc: 'Familiens videoklip, klar til afspilning.' },
   { id: 'steam', icon: 'steam', label: 'Steam', desc: 'Hele dit spilbibliotek, klar til start.' },
-  { id: 'retro', icon: 'retro', label: 'Retro spil', desc: 'C64-klassikere med levende gameplay-previews.' }
+  { id: 'retro', icon: 'retro', label: 'Retro spil', desc: 'C64-klassikere - vælg et cover og gameplayet starter med det samme.' }
 ];
 
 var homeScreen = makeScreen('home', function (screen, root) {
@@ -1358,7 +1356,7 @@ function conceptToast() {
   toast('Koncept — kun stil og navigation');
 }
 
-function makeSection(id, title, subtitle, cols, buildTiles, onFocusChange) {
+function makeSection(id, title, subtitle, cols, buildTiles, onFocusChange, onSelect) {
   return makeScreen(id, function (screen, root) {
     root.appendChild(el('h2', 'screen-title', title));
     root.appendChild(el('p', 'screen-subtitle', subtitle));
@@ -1372,21 +1370,25 @@ function makeSection(id, title, subtitle, cols, buildTiles, onFocusChange) {
     var tiles = buildTiles(grid);
     focus.setItems(tiles);
 
+    var select = onSelect || conceptToast;
+
     function focusChanged() {
       if (onFocusChange) onFocusChange(focus.index);
       else Ambient.show(id, { svg: HEROES[id] });
     }
 
     tiles.forEach(function (tile) {
-      tapToFocus(focus, tile, conceptToast, focusChanged);
+      tapToFocus(focus, tile, function () { select(focus.index); }, focusChanged);
     });
 
     screen.enter = function () { focus.index = 0; focus.applyFocus(false); focusChanged(); };
+    // Genopfrisk hero/baggrund, naar man vender tilbage fra en underside
+    screen.resume = focusChanged;
     screen.onInput = function (action) {
       if (['up', 'down', 'left', 'right'].indexOf(action) !== -1) {
         if (focus.move(action)) focusChanged();
       }
-      else if (action === 'a') conceptToast();
+      else if (action === 'a') select(focus.index);
       else if (action === 'b') Screens.pop();
     };
   });
@@ -1505,233 +1507,102 @@ var steamScreen = makeSection('steam', 'Steam', STEAM.length + ' installerede sp
   Ambient.show('steam:' + game.appid, { svg: HEROES.steam, img: steamHeroUrl(game.appid) });
 });
 
-// Retro spil: samme interaktion som Videoklip - een raekke, venstre/hoejre,
-// A starter/stopper preview. Fliserne viser aegte gameplay-stills fra
-// longplay-videoerne (frame fra preview-startpunktet).
-var retroScreen = makeScreen('retro', function (screen, root) {
-  var hero = el('div', 'vhero');
-  var rTitle = el('div', 'vhero-title');
-  var rMeta = el('div', 'vhero-meta');
-  hero.appendChild(rTitle);
-  hero.appendChild(rMeta);
-  root.appendChild(hero);
+// Retro spil: Steam-lignende flisegitter af cover art. Baggrunden er den
+// statiske C64-regnbue og skifter aldrig med fokus (modsat Steam). Vaelges
+// et cover, aabnes en dedikeret side, hvor gameplayet starter med det
+// samme - intet LOAD-ritual, intet mellemtrin.
+var retroScreen = makeSection('retro', 'Retro spil',
+  LONGPLAYS.length + ' C64-klassikere · vælg et cover for at starte', 5,
+  function (grid) {
+    return LONGPLAYS.map(function (g) {
+      var tile = el('div', 'tile steam-tile');
+      var fb = el('div', 'fallback');
+      fb.appendChild(el('div', 'big-letter', g.name.charAt(0)));
+      fb.appendChild(el('div', 'name', g.name));
+      tile.appendChild(fb);
+      if (g.cover) {
+        var cover = el('img', 'cover');
+        cover.alt = g.name;
+        cover.loading = 'lazy';
+        cover.addEventListener('error', function () { cover.remove(); });
+        cover.src = g.cover;
+        tile.appendChild(cover);
+      }
+      grid.appendChild(tile);
+      return tile;
+    });
+  },
+  function () {
+    // Statisk - regnbuen skifter aldrig, uanset hvilket cover der er fokuseret.
+    // Egen noegle (ikke 'retro'), saa den ikke kolliderer med hjemmeskaermens
+    // hover-forhaandsvisning af det samme kort og dropper opdateringen.
+    Ambient.show('retro-grid', { svg: RETRO_ART_HERO });
+  },
+  function (i) {
+    var g = LONGPLAYS[i];
+    if (g.playUrl) { window.location.href = g.playUrl; return; }
+    Screens.push(retroPlayScreen, i);
+  }
+);
 
-  var rail = el('div', 'rail vrail retro-rail');
-  root.appendChild(rail);
+// Retro-afspilning: fuldskaerms gameplay i CRT-ramme, der starter med det
+// samme. Samme statiske regnbue-baggrund som gitteret.
+var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
+  var current = null;
 
-  var focus = new Grid(LONGPLAYS.length);
-  var previewTimer = null;
-
-  var tiles = LONGPLAYS.map(function (g) {
-    var tile = el('div', 'tile media-tile');
-    var ph = el('div', 'ph', g.scene.emoji);
-    ph.style.background = g.scene.bg;
-    tile.appendChild(ph);
-
-    if (g.cover) {
-      // Aegte box art som flise-art
-      var art = el('img', 'thumb');
-      art.alt = '';
-      art.loading = 'lazy';
-      art.addEventListener('error', function () { art.remove(); });
-      art.src = g.cover;
-      tile.appendChild(art);
-    } else if (g.url) {
-      // Gameplay-still fra longplay-videoen
-      var thumb = document.createElement('video');
-      thumb.className = 'thumb';
-      thumb.muted = true;
-      thumb.setAttribute('muted', '');
-      thumb.setAttribute('playsinline', '');
-      thumb.preload = 'metadata';
-      thumb.addEventListener('error', function () { thumb.remove(); });
-      thumb.src = g.url + '#t=' + g.start;
-      tile.appendChild(thumb);
-    }
-
-    var cap = el('div', 'caption', g.name);
-    cap.appendChild(el('span', 'cap-sub', g.sub));
-    tile.appendChild(cap);
-    rail.appendChild(tile);
-    return tile;
-  });
-  focus.setItems(tiles);
-
-  function syncHero() {
-    var g = LONGPLAYS[focus.index];
-    rTitle.textContent = g.name;
-    rMeta.textContent = g.sub + (g.playUrl ? ' · spilbar online' : (g.urls || g.url) ? ' · longplay · archive.org' : ' · cover art');
+  function attempt(g, i, urls) {
+    Ambient.show('retro-play:' + i, {
+      svg: RETRO_ART_HERO,
+      img: g.cover,
+      imgArt: true,
+      keepCinema: true,
+      video: urls,
+      videoStart: g.start,
+      pixelated: true, // testens vinder: pixel-perfekt C64-rendering
+      onVideoFail: function () {
+        // Alle kandidater fejlede: slaa filnavnet op som sidste udvej
+        if (g.resolved || !g.item) return;
+        g.resolved = true;
+        resolveArchiveMp4(g.item, g.match).then(function (url) {
+          if (url && current === i && document.body.dataset.screen === 'retro-play') {
+            g.urls = [url];
+            attempt(g, i, g.urls);
+          }
+        });
+      }
+    }, true);
   }
 
-  function showPreview(force) {
-    var i = focus.index;
+  function play(i) {
+    current = i;
     var g = LONGPLAYS[i];
     var candidates = g.urls || (g.url ? [g.url] : null);
-
-    function play(f, urls) {
-      Ambient.show('retro:' + i, {
-        svg: RETRO_ART_HERO,
-        img: g.cover,
-        imgArt: true,
-        keepCinema: true,
-        video: urls,
-        videoStart: g.start,
-        videoMax: 15,
-        pixelated: true, // testens vinder: pixel-perfekt C64-rendering
-        onVideoFail: function () {
-          // Alle kandidater fejlede: slaa filnavnet op som sidste udvej
-          if (g.resolved || !g.item) return;
-          g.resolved = true;
-          resolveArchiveMp4(g.item, g.match).then(function (url) {
-            if (url && focus.index === i && document.body.dataset.screen === 'retro') {
-              g.urls = [url];
-              play(true, g.urls);
-            }
-          });
-        }
-      }, f);
-    }
-
     if (candidates) {
-      play(force, candidates);
+      attempt(g, i, candidates);
     } else if (g.item && !g.resolved) {
       // Intet gaettet filnavn - vis coveret straks og slaa det rigtige
       // filnavn op via metadata-API'et, saa videoen kan koble sig paa
       g.resolved = true;
-      Ambient.show('retro:' + i, { svg: RETRO_ART_HERO, img: g.cover, imgArt: true }, force);
+      Ambient.show('retro-play:' + i, { svg: RETRO_ART_HERO, img: g.cover, imgArt: true }, true);
       resolveArchiveMp4(g.item, g.match).then(function (url) {
-        if (url && focus.index === i && document.body.dataset.screen === 'retro') {
-          g.urls = [url];
-          syncHero();
-          play(true, g.urls);
-        }
+        if (url && current === i) { g.urls = [url]; attempt(g, i, g.urls); }
       });
     } else {
-      Ambient.show('retro:' + i, { svg: RETRO_ART_HERO, img: g.cover, imgArt: true }, force);
+      Ambient.show('retro-play:' + i, { svg: RETRO_ART_HERO, img: g.cover, imgArt: true }, true);
     }
   }
 
-  function focusChanged() {
-    cancelLaunch();
-    document.body.classList.remove('cinema'); // UI straks tilbage ved navigation
-    syncHero();
-    clearTimeout(previewTimer);
-    previewTimer = setTimeout(function () {
-      if (document.body.dataset.screen === 'retro') showPreview();
-    }, 450);
-  }
-
-  // Load-sekvensen: C64-loaderen som start-ritual ved A
-  var launch = null;
-
-  function cancelLaunch() {
-    if (!launch) return;
-    launch.timers.forEach(clearTimeout);
-    var overlay = launch.el;
-    overlay.classList.remove('on');
-    setTimeout(function () { overlay.remove(); }, 380);
-    launch = null;
-  }
-
-  function startLaunch() {
-    clearTimeout(previewTimer);
-    Ambient.stopPreview();
-    cancelLaunch();
-    var g = LONGPLAYS[focus.index];
-    var name = g.name.toUpperCase();
-
-    var overlay = el('div');
-    overlay.id = 'c64load';
-    var crt = makeCrtTv();
-    var boot = el('div', 'c64-boot');
-    var field = el('div', 'c64-field');
-    var pre = el('pre', 'c64-text', 'READY.\n');
-    var cur = el('span', 'c64-cursor');
-    pre.appendChild(cur);
-    field.appendChild(pre);
-    boot.appendChild(field);
-    crt.screen.appendChild(boot);
-    overlay.appendChild(crt.tv);
-    document.body.appendChild(overlay);
-    requestAnimationFrame(function () { overlay.classList.add('on'); });
+  screen.enter = function (index) {
     document.body.classList.add('cinema');
-
-    // Start hentning/afspilning af det aegte gameplay med det samme, skjult
-    // bag den 100% daekkende loade-skaerm - saa lastetiden gemmer sig bag
-    // ritualet, i stedet for at komme oveni det som en pause bagefter
-    if (!g.playUrl) showPreview(true);
-
-    launch = { el: overlay, timers: [] };
-    var L = launch;
-    function addText(s) { pre.insertBefore(document.createTextNode(s), cur); }
-    function at(t, fn) { L.timers.push(setTimeout(fn, t)); }
-
-    // LOAD-linjen skrives tegn for tegn, som paa den aegte maskine
-    var line = 'LOAD "' + name + '",8,1';
-    var t = 300;
-    for (var ci = 0; ci < line.length; ci++) {
-      (function (ch, tt) { at(tt, function () { addText(ch); }); })(line[ci], t);
-      t += 45;
-    }
-    t += 350; at(t, function () { addText('\n\nSEARCHING FOR ' + name + '\n'); });
-    t += 650; at(t, function () { addText('LOADING\n'); });
-    t += 700; at(t, function () { addText('READY.\n'); });
-    if (g.playUrl) {
-      // Spilbar online-version: loaderen slutter med RUN og navigerer derhen
-      t += 550; at(t, function () { addText('RUN\n'); });
-      t += 600; at(t, function () {
-        launch = null;
-        window.location.href = g.playUrl;
-      });
-    } else {
-      t += 550; at(t, function () {
-        launch = null;
-        overlay.classList.remove('on');
-        setTimeout(function () { overlay.remove(); }, 380);
-        // Gameplayet koerer allerede (startet i baggrunden ved ritualets
-        // begyndelse) - vi skal blot afsloere det ved at fjerne skaermen
-      });
-    }
-  }
-
-  // A: start spillet (load-sekvens -> gameplay); under sekvens: spring
-  // direkte til gameplay; under gameplay: stop
-  function pressA() {
-    var g = LONGPLAYS[focus.index];
-    if (launch) {
-      cancelLaunch();
-      if (g.playUrl) { window.location.href = g.playUrl; return; }
-      // Gameplayet koerer allerede i baggrunden - spring direkte til det
-      // i stedet for at starte forfra (undgaar den samme lastetid igen)
-    } else if (Ambient.isPreviewing()) {
-      Ambient.stopPreview();
-    } else {
-      startLaunch();
-    }
-  }
-
-  tiles.forEach(function (tile) {
-    tapToFocus(focus, tile, pressA, focusChanged);
-  });
-
-  screen.enter = function () {
-    focus.index = 0;
-    focus.applyFocus(false);
-    focusChanged();
+    play(index);
   };
-  screen.leave = function () { cancelLaunch(); Ambient.stopPreview(); };
+  screen.leave = function () {
+    Ambient.stopPreview();
+    current = null;
+  };
   screen.onInput = function (action) {
-    if (action === 'left' || action === 'up') { if (focus.move('left')) focusChanged(); }
-    else if (action === 'right' || action === 'down') { if (focus.move('right')) focusChanged(); }
-    else if (action === 'a') pressA();
-    else if (action === 'b') {
-      if (launch) {
-        cancelLaunch();
-        Ambient.stopPreview(); // droppede spillet skal ikke blive ved med at laese/spille skjult
-        document.body.classList.remove('cinema');
-        return;
-      }
-      clearTimeout(previewTimer);
+    if (action === 'b') {
+      document.body.classList.remove('cinema');
       Screens.pop();
     }
   };
