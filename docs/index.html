@@ -1507,7 +1507,7 @@ var retroScreen = makeScreen('retro', function (screen, root) {
   function syncHero() {
     var g = LONGPLAYS[focus.index];
     rTitle.textContent = g.name;
-    rMeta.textContent = g.sub + (g.playUrl ? ' · spilbar online' : g.url ? ' · longplay · archive.org' : ' · cover art');
+    rMeta.textContent = g.sub + (g.playUrl ? ' · spilbar online' : (g.urls || g.url) ? ' · longplay · archive.org' : ' · cover art');
   }
 
   function showPreview(force) {
