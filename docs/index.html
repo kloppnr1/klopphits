@@ -1636,6 +1636,11 @@ var retroScreen = makeScreen('retro', function (screen, root) {
     requestAnimationFrame(function () { overlay.classList.add('on'); });
     document.body.classList.add('cinema');
 
+    // Start hentning/afspilning af det aegte gameplay med det samme, skjult
+    // bag den 100% daekkende loade-skaerm - saa lastetiden gemmer sig bag
+    // ritualet, i stedet for at komme oveni det som en pause bagefter
+    if (!g.playUrl) showPreview(true);
+
     launch = { el: overlay, timers: [] };
     var L = launch;
     function addText(s) { pre.insertBefore(document.createTextNode(s), cur); }
@@ -1663,7 +1668,8 @@ var retroScreen = makeScreen('retro', function (screen, root) {
         launch = null;
         overlay.classList.remove('on');
         setTimeout(function () { overlay.remove(); }, 380);
-        showPreview(true); // gameplay starter, naar loaderen er faerdig
+        // Gameplayet koerer allerede (startet i baggrunden ved ritualets
+        // begyndelse) - vi skal blot afsloere det ved at fjerne skaermen
       });
     }
   }
@@ -1675,7 +1681,8 @@ var retroScreen = makeScreen('retro', function (screen, root) {
     if (launch) {
       cancelLaunch();
       if (g.playUrl) { window.location.href = g.playUrl; return; }
-      showPreview(true);
+      // Gameplayet koerer allerede i baggrunden - spring direkte til det
+      // i stedet for at starte forfra (undgaar den samme lastetid igen)
     } else if (Ambient.isPreviewing()) {
       Ambient.stopPreview();
     } else {
@@ -1692,7 +1699,7 @@ var retroScreen = makeScreen('retro', function (screen, root) {
     focus.applyFocus(false);
     focusChanged();
   };
-  screen.leave = function () { cancelLaunch(); };
+  screen.leave = function () { cancelLaunch(); Ambient.stopPreview(); };
   screen.onInput = function (action) {
     if (action === 'left' || action === 'up') { if (focus.move('left')) focusChanged(); }
     else if (action === 'right' || action === 'down') { if (focus.move('right')) focusChanged(); }
@@ -1700,6 +1707,7 @@ var retroScreen = makeScreen('retro', function (screen, root) {
     else if (action === 'b') {
       if (launch) {
         cancelLaunch();
+        Ambient.stopPreview(); // droppede spillet skal ikke blive ved med at laese/spille skjult
         document.body.classList.remove('cinema');
         return;
       }
