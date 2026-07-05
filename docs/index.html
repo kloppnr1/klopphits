@@ -63,13 +63,42 @@
     object-fit: cover;
   }
   /* Art-visning til portraet-covers: hele vaerket centreret med skygge,
-     baggrunden fyldes af en sloeret kopi af coveret selv */
-  #ambient .amb-layer .art-bg {
-    position: absolute; inset: -6%;
+     baggrunden er en C64 boot-skaerm med personlig LOAD-tekst */
+  #ambient .amb-layer .c64-bg {
+    position: absolute; inset: 0;
     z-index: 0;
-    width: 112%; height: 112%;
-    object-fit: cover;
-    filter: blur(42px) brightness(0.4) saturate(1.15);
+    background: #7869c4; /* C64-rammens lyseblaa */
+    display: flex; align-items: center; justify-content: center;
+  }
+  #ambient .amb-layer .c64-screen {
+    width: 82%; height: 78%;
+    background: #40318d; /* C64-skaermens moerkeblaa */
+    padding: 3.2rem 3.6rem;
+    box-shadow: inset 0 0 7rem rgba(0, 0, 0, 0.28);
+  }
+  .c64-text {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-weight: 700;
+    font-size: 1.85rem;
+    line-height: 1.55;
+    color: #7869c4;
+    letter-spacing: 0.06em;
+    white-space: pre-wrap;
+    margin: 0;
+  }
+  .c64-cursor {
+    display: inline-block;
+    width: 1.05ch; height: 1.05em;
+    background: #7869c4;
+    vertical-align: text-bottom;
+    animation: c64blink 1.06s steps(1) infinite;
+  }
+  @keyframes c64blink { 50% { opacity: 0; } }
+  #ambient .amb-layer .c64-bg::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0 2px, transparent 2px 5px);
+    pointer-events: none;
   }
   /* Ambient-laget er 3vw stoerre end skaermen (Ken Burns) - kompenser,
      saa coveret faar 5vh luft over og 9vh under i skaerm-koordinater */
@@ -598,6 +627,18 @@ var STEAM_CDN = 'https://cdn.cloudflare.steamstatic.com/steam/apps/';
 function steamHeroUrl(appid) { return STEAM_CDN + appid + '/library_hero.jpg'; }
 function steamCoverUrl(appid) { return STEAM_CDN + appid + '/library_600x900.jpg'; }
 
+function makeC64Boot(label) {
+  var name = (label || '').toUpperCase();
+  var wrap = el('div', 'c64-bg');
+  var screenEl = el('div', 'c64-screen');
+  var txt = '**** COMMODORE 64 BASIC V2 ****\n\n 64K RAM SYSTEM  38911 BASIC BYTES FREE\n\nREADY.\nLOAD "' + name + '",8,1\n\nSEARCHING FOR ' + name + '\nLOADING\nREADY.\n';
+  var pre = el('pre', 'c64-text', txt);
+  pre.appendChild(el('span', 'c64-cursor'));
+  screenEl.appendChild(pre);
+  wrap.appendChild(screenEl);
+  return wrap;
+}
+
 var Ambient = (function () {
   var root = document.getElementById('ambient');
   var layers = [el('div', 'amb-layer'), el('div', 'amb-layer')];
@@ -654,27 +695,25 @@ var Ambient = (function () {
     layer.innerHTML = spec.svg || '';
     if (spec.node) layer.appendChild(spec.node);
     if (spec.img) {
-      var im = new Image();
-      im.alt = '';
       if (spec.imgArt) {
-        // Portraet-cover: sloeret kopi som baggrund, hele vaerket i front
-        im.className = 'art-bg';
+        // C64 boot-skaerm som bagtaeppe (vises straks), coveret i front
+        layer.appendChild(makeC64Boot(spec.imgArtLabel || ''));
         var fg = new Image();
         fg.className = 'art-fg';
         fg.alt = '';
-        im.onload = function () {
-          if (currentKey !== key) return;
-          fg.src = spec.img;
-          layer.appendChild(im);
-          layer.appendChild(fg);
+        fg.onload = function () {
+          if (currentKey === key) layer.appendChild(fg);
         };
+        fg.src = spec.img;
       } else {
+        var im = new Image();
         im.className = 'hero-img';
+        im.alt = '';
         im.onload = function () {
           if (currentKey === key) layer.appendChild(im);
         };
+        im.src = spec.img; // ved fejl beholdes SVG-scenen
       }
-      im.src = spec.img; // ved fejl beholdes SVG-scenen
     }
     if (spec.video) {
       var v = document.createElement('video');
@@ -1371,6 +1410,7 @@ var retroScreen = makeScreen('retro', function (screen, root) {
         svg: sceneSvg(g.scene, 'r' + i),
         img: g.cover,
         imgArt: true,
+        imgArtLabel: g.name,
         video: urls,
         videoStart: g.start,
         videoMax: 15,
@@ -1392,7 +1432,7 @@ var retroScreen = makeScreen('retro', function (screen, root) {
     if (candidates) {
       play(force, candidates);
     } else {
-      Ambient.show('retro:' + i, { svg: sceneSvg(g.scene, 'r' + i), img: g.cover, imgArt: true }, force);
+      Ambient.show('retro:' + i, { svg: sceneSvg(g.scene, 'r' + i), img: g.cover, imgArt: true, imgArtLabel: g.name }, force);
     }
   }
 
