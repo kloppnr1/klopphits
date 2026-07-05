@@ -291,7 +291,7 @@
 
   /* ---- Videoklip: fuldskaerms live-preview, fliser som diskret raekke ---- */
 
-  #screen-videos { justify-content: flex-end; gap: 1.4rem; padding-bottom: 1.6rem; }
+  #screen-videos, #screen-retro { justify-content: flex-end; gap: 1.4rem; padding-bottom: 1.6rem; }
   .vhero { display: flex; flex-direction: column; gap: 0.4rem; }
   .vhero .vhero-title { font-size: 3.8rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.05; }
   .vhero .vhero-meta { font-size: 1.3rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
@@ -562,10 +562,29 @@ var Ambient = (function () {
     }
   }
 
+  function currentVideo() {
+    return layers[active].querySelector('video');
+  }
+
+  // Stop en igangvaerende preview og fald tilbage til stillbilledet
+  function stopPreview() {
+    var v = currentVideo();
+    if (!v) return false;
+    v.classList.remove('on');
+    setTimeout(function () { v.remove(); }, 900);
+    return true;
+  }
+
+  function isPreviewing() {
+    var v = currentVideo();
+    return !!(v && v.classList.contains('on'));
+  }
+
   // spec: { svg: SVG-fallback, node: DOM-element (fx cover-katalog),
   //         img: billed-URL, video: video-URL til live-preview }
-  function show(key, spec) {
-    if (key === currentKey || !spec) return;
+  // force: vis igen selv om noeglen er uaendret (bruges til A = afspil igen)
+  function show(key, spec, force) {
+    if ((key === currentKey && !force) || !spec) return;
     currentKey = key;
     active = 1 - active;
     var layer = layers[active];
@@ -617,7 +636,7 @@ var Ambient = (function () {
       if (!hidden.classList.contains('visible')) stopVideo(hidden);
     }, 1400);
   }
-  return { show: show };
+  return { show: show, stopPreview: stopPreview, isPreviewing: isPreviewing };
 })();
 
 // ============================================================================
@@ -1056,22 +1075,36 @@ var videosScreen = makeScreen('videos', function (screen, root) {
       (item.durText ? ' · ' + item.durText : '') + ' · sample-video (demo)';
   }
 
+  function showPreview(force) {
+    var i = focus.index;
+    Ambient.show('videos:' + i, {
+      svg: sceneSvg(VIDEOS[i].scene, 'v' + i),
+      img: VIDEOS[i].poster,
+      video: VIDEOS[i].url
+    }, force);
+  }
+
   // Kort dvale foer preview starter, saa hurtig scrolling ikke spilder baandbredde
   function focusChanged() {
     syncHero();
     clearTimeout(previewTimer);
-    var i = focus.index;
     previewTimer = setTimeout(function () {
-      Ambient.show('videos:' + i, {
-        svg: sceneSvg(VIDEOS[i].scene, 'v' + i),
-        img: VIDEOS[i].poster,
-        video: VIDEOS[i].url
-      });
+      if (document.body.dataset.screen === 'videos') showPreview();
     }, 450);
   }
 
+  // A: stop en koerende preview, eller start den fokuserede med det samme
+  function pressA() {
+    if (Ambient.isPreviewing()) {
+      Ambient.stopPreview();
+    } else {
+      clearTimeout(previewTimer);
+      showPreview(true);
+    }
+  }
+
   tiles.forEach(function (tile) {
-    tapToFocus(focus, tile, conceptToast, focusChanged);
+    tapToFocus(focus, tile, pressA, focusChanged);
   });
 
   screen.enter = function () {
@@ -1082,7 +1115,7 @@ var videosScreen = makeScreen('videos', function (screen, root) {
   screen.onInput = function (action) {
     if (action === 'left' || action === 'up') { if (focus.move('left')) focusChanged(); }
     else if (action === 'right' || action === 'down') { if (focus.move('right')) focusChanged(); }
-    else if (action === 'a') conceptToast();
+    else if (action === 'a') pressA();
     else if (action === 'b') {
       clearTimeout(previewTimer);
       Screens.pop();
@@ -1111,31 +1144,100 @@ var steamScreen = makeSection('steam', 'Steam', STEAM.length + ' installerede sp
   Ambient.show('steam:' + game.appid, { svg: HEROES.steam, img: steamHeroUrl(game.appid) });
 });
 
-var retroPreviewTimer = null;
-var retroScreen = makeSection('retro', 'Retro spil', 'C64-longplays · World of Longplays / archive.org', 3, function (grid) {
-  return LONGPLAYS.map(function (g) {
+// Retro spil: samme interaktion som Videoklip - een raekke, venstre/hoejre,
+// A starter/stopper preview. Fliserne viser aegte gameplay-stills fra
+// longplay-videoerne (frame fra preview-startpunktet).
+var retroScreen = makeScreen('retro', function (screen, root) {
+  var hero = el('div', 'vhero');
+  var rTitle = el('div', 'vhero-title');
+  var rMeta = el('div', 'vhero-meta');
+  hero.appendChild(rTitle);
+  hero.appendChild(rMeta);
+  root.appendChild(hero);
+
+  var rail = el('div', 'rail vrail');
+  root.appendChild(rail);
+
+  var focus = new Grid(LONGPLAYS.length);
+  var previewTimer = null;
+
+  var tiles = LONGPLAYS.map(function (g) {
     var tile = el('div', 'tile media-tile');
     var ph = el('div', 'ph', g.scene.emoji);
     ph.style.background = g.scene.bg;
     tile.appendChild(ph);
+
+    var thumb = document.createElement('video');
+    thumb.className = 'thumb';
+    thumb.muted = true;
+    thumb.setAttribute('muted', '');
+    thumb.setAttribute('playsinline', '');
+    thumb.preload = 'metadata';
+    thumb.addEventListener('error', function () { thumb.remove(); });
+    thumb.src = g.url + '#t=' + g.start;
+    tile.appendChild(thumb);
+
     var cap = el('div', 'caption', g.name);
     cap.appendChild(el('span', 'cap-sub', g.sub));
     tile.appendChild(cap);
-    grid.appendChild(tile);
+    rail.appendChild(tile);
     return tile;
   });
-}, function (index) {
-  clearTimeout(retroPreviewTimer);
-  var g = LONGPLAYS[index];
-  retroPreviewTimer = setTimeout(function () {
-    if (document.body.dataset.screen !== 'retro') return;
-    Ambient.show('retro:' + index, {
-      svg: sceneSvg(g.scene, 'r' + index),
+  focus.setItems(tiles);
+
+  function syncHero() {
+    var g = LONGPLAYS[focus.index];
+    rTitle.textContent = g.name;
+    rMeta.textContent = g.sub + ' · longplay · archive.org';
+  }
+
+  function showPreview(force) {
+    var i = focus.index;
+    var g = LONGPLAYS[i];
+    Ambient.show('retro:' + i, {
+      svg: sceneSvg(g.scene, 'r' + i),
       video: g.url,
       videoStart: g.start,
       videoMax: 15
-    });
-  }, 450);
+    }, force);
+  }
+
+  function focusChanged() {
+    syncHero();
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(function () {
+      if (document.body.dataset.screen === 'retro') showPreview();
+    }, 450);
+  }
+
+  // A: stop en koerende preview, eller start den fokuserede med det samme
+  function pressA() {
+    if (Ambient.isPreviewing()) {
+      Ambient.stopPreview();
+    } else {
+      clearTimeout(previewTimer);
+      showPreview(true);
+    }
+  }
+
+  tiles.forEach(function (tile) {
+    tapToFocus(focus, tile, pressA, focusChanged);
+  });
+
+  screen.enter = function () {
+    focus.index = 0;
+    focus.applyFocus(false);
+    focusChanged();
+  };
+  screen.onInput = function (action) {
+    if (action === 'left' || action === 'up') { if (focus.move('left')) focusChanged(); }
+    else if (action === 'right' || action === 'down') { if (focus.move('right')) focusChanged(); }
+    else if (action === 'a') pressA();
+    else if (action === 'b') {
+      clearTimeout(previewTimer);
+      Screens.pop();
+    }
+  };
 });
 
 // ============================================================================
