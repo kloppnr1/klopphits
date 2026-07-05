@@ -140,6 +140,51 @@
   #ambient .amb-layer .amb-caption .amb-caption-sub {
     font-size: 1.1rem; color: rgba(235, 235, 245, 0.72); margin-top: 0.3rem;
   }
+
+  /* Split-layout: cover + titel som en "plakat" ved siden af CRT-skaermen,
+     i stedet for at ligge oven i hinanden midt paa skaermen */
+  #ambient .amb-layer .amb-split {
+    position: absolute; inset: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(2.5rem, 6vw, 6rem);
+    padding: 0 calc(3vw + var(--safe-x));
+  }
+  #ambient .amb-layer .amb-split .amb-split-poster {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  #ambient .amb-layer .amb-split .amb-split-poster .art-fg {
+    position: static;
+    height: 46vh;
+    width: auto;
+    aspect-ratio: 2 / 3;
+    object-fit: contain;
+    background: #0d0b10;
+    border-radius: 1rem;
+    box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.65);
+    filter: none;
+    transition: opacity 0.6s ease, transform 0.4s ease;
+  }
+  #ambient .amb-layer .amb-split .amb-caption {
+    position: static;
+    max-width: 26vh;
+    text-align: center;
+    text-shadow: none;
+  }
+  #ambient .amb-layer .amb-split .amb-caption .amb-caption-title { font-size: 2.3rem; }
+  #ambient .amb-layer .amb-split .amb-caption .amb-caption-sub { font-size: 1.15rem; margin-top: 0.5rem; }
+  #ambient .amb-layer .amb-split .amb-split-screen { flex: 0 0 auto; }
+  #ambient .amb-layer .amb-split .amb-split-screen .crt-tv {
+    position: static;
+    transform: none;
+    height: 58vh;
+  }
   #ambient .amb-layer video.hero-video {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
@@ -835,7 +880,26 @@ var Ambient = (function () {
     stopVideo(layer);
     layer.innerHTML = spec.svg || '';
     if (spec.node) layer.appendChild(spec.node);
-    if (spec.caption) {
+
+    // Split-layout: cover + titel som en "plakat" ved siden af CRT-skaermen,
+    // i stedet for frit flydende oven i hinanden
+    var posterHost = layer, screenHost = layer;
+    if (spec.splitLayout) {
+      var splitEl = document.createElement('div');
+      splitEl.className = 'amb-split';
+      posterHost = document.createElement('div');
+      posterHost.className = 'amb-split-poster';
+      screenHost = document.createElement('div');
+      screenHost.className = 'amb-split-screen';
+      splitEl.appendChild(posterHost);
+      splitEl.appendChild(screenHost);
+      layer.appendChild(splitEl);
+    }
+
+    if (spec.caption && spec.splitLayout) {
+      // I split-layout hoerer teksten til plakaten (under coveret), ikke
+      // laget som helhed - tilfoejes der senere naar coveret er indlaest
+    } else if (spec.caption) {
       var cap = document.createElement('div');
       cap.className = 'amb-caption';
       var capTitle = document.createElement('div');
@@ -861,8 +925,23 @@ var Ambient = (function () {
           // Kommer coveret foerst efter previewet er startet, skjules det straks
           // (medmindre spec.keepArt beder om at coveret altid skal blive staaende)
           var pv = layer.querySelector('video');
-          if (!spec.keepArt && pv && pv.classList.contains('on')) fg.classList.add('skjult');
-          layer.appendChild(fg);
+          if (!spec.keepArt && !spec.splitLayout && pv && pv.classList.contains('on')) fg.classList.add('skjult');
+          posterHost.appendChild(fg);
+          if (spec.splitLayout && spec.caption) {
+            var pcap = document.createElement('div');
+            pcap.className = 'amb-caption';
+            var pcapTitle = document.createElement('div');
+            pcapTitle.className = 'amb-caption-title';
+            pcapTitle.textContent = spec.caption.title || '';
+            pcap.appendChild(pcapTitle);
+            if (spec.caption.sub) {
+              var pcapSub = document.createElement('div');
+              pcapSub.className = 'amb-caption-sub';
+              pcapSub.textContent = spec.caption.sub;
+              pcap.appendChild(pcapSub);
+            }
+            posterHost.appendChild(pcap);
+          }
         };
         fg.src = spec.img;
       } else {
@@ -962,9 +1041,9 @@ var Ambient = (function () {
         if (spec.onVideoFail) spec.onVideoFail();
       }); // stillbilledet bliver staaende
       setSrc();
-      layer.appendChild(v);
+      screenHost.appendChild(v);
       if (pcWrap) {
-        layer.appendChild(pcWrap.tv);
+        screenHost.appendChild(pcWrap.tv);
         (function loop() {
           if (!v.isConnected) return;
           if (v.videoWidth) {
@@ -1601,6 +1680,7 @@ var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
       imgArt: true,
       keepArt: true, // cover, tekst og video vises samtidig - intet fader vaek
       caption: { title: g.name, sub: g.sub },
+      splitLayout: true, // plakat (cover + tekst) ved siden af CRT'en, ikke oven i
       keepCinema: true,
       video: urls,
       videoStart: g.start,
@@ -1623,7 +1703,7 @@ var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
     current = i;
     var g = LONGPLAYS[i];
     var candidates = g.urls || (g.url ? [g.url] : null);
-    var stillSpec = { svg: RETRO_ART_HERO, img: g.cover, imgArt: true, caption: { title: g.name, sub: g.sub } };
+    var stillSpec = { svg: RETRO_ART_HERO, img: g.cover, imgArt: true, caption: { title: g.name, sub: g.sub }, splitLayout: true };
     if (candidates) {
       attempt(g, i, candidates);
     } else if (g.item && !g.resolved) {
