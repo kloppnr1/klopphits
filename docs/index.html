@@ -586,6 +586,18 @@
     background: #0d0b10;
     padding: 0.4rem;
   }
+  /* Ramme om retro-covers: samler de vidt forskellige naturlige
+     coverformater i et ensartet "billedramme"-udtryk, i stedet for at
+     lade dem staa alene i uens stoerrelser */
+  .tile.steam-tile.retro-tile {
+    padding: 0.55rem;
+    background: linear-gradient(155deg, #3d3229 0%, #17130f 100%);
+    box-shadow: 0 0.4rem 1.2rem rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 210, 150, 0.16);
+  }
+  .tile.steam-tile.retro-tile .fallback,
+  .tile.steam-tile.retro-tile img.cover {
+    border-radius: 0.5rem;
+  }
   .tile.steam-tile .fallback {
     position: absolute; inset: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -1692,7 +1704,7 @@ var retroScreen = makeSection('retro', 'Retro spil',
   LONGPLAYS.length + ' C64-klassikere · vælg et cover for at starte', 5,
   function (grid) {
     return LONGPLAYS.map(function (g) {
-      var tile = el('div', 'tile steam-tile');
+      var tile = el('div', 'tile steam-tile retro-tile');
       var fb = el('div', 'fallback');
       fb.appendChild(el('div', 'big-letter', g.name.charAt(0)));
       fb.appendChild(el('div', 'name', g.name));
