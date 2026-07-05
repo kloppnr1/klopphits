@@ -147,10 +147,12 @@
     position: absolute; inset: 0;
     z-index: 3;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     gap: clamp(2.5rem, 6vw, 6rem);
-    padding: 0 calc(3vw + var(--safe-x));
+    padding-top: calc(15vh + var(--safe-y));
+    padding-left: calc(3vw + var(--safe-x));
+    padding-right: calc(3vw + var(--safe-x));
   }
   #ambient .amb-layer .amb-split .amb-split-poster {
     flex: 0 0 auto;
@@ -159,9 +161,11 @@
     align-items: center;
     gap: 1.5rem;
   }
+  /* Cover og skaerm-panel deler samme hoejde og topkant, saa de to kort
+     staar paent paa linje i stedet for at svaeve forskudt af hinanden */
   #ambient .amb-layer .amb-split .amb-split-poster .art-fg {
     position: static;
-    height: 46vh;
+    height: 52vh;
     width: auto;
     aspect-ratio: 2 / 3;
     object-fit: contain;
@@ -180,10 +184,25 @@
   #ambient .amb-layer .amb-split .amb-caption .amb-caption-title { font-size: 2.3rem; }
   #ambient .amb-layer .amb-split .amb-caption .amb-caption-sub { font-size: 1.15rem; margin-top: 0.5rem; }
   #ambient .amb-layer .amb-split .amb-split-screen { flex: 0 0 auto; }
-  #ambient .amb-layer .amb-split .amb-split-screen .crt-tv {
-    position: static;
-    transform: none;
-    height: 58vh;
+  /* CRT-rammen droppet for split-layoutet - rent skaermpanel i stedet,
+     samme hoejde som coveret ved siden af */
+  #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen {
+    position: relative;
+    height: 52vh;
+    aspect-ratio: 4 / 3;
+    background: #000;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.65);
+    opacity: 0;
+    transition: opacity 0.8s ease;
+  }
+  #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen.on { opacity: 1; }
+  #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen canvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
   }
   #ambient .amb-layer video.hero-video {
     position: absolute; inset: 0;
@@ -807,6 +826,13 @@ function makeCrtTv() {
   return { tv: tv, screen: screenEl };
 }
 
+// Simpelt skaerm-panel uden fjernsyns-kabinettet - bare selve billedet,
+// skarpt afgraenset, som et almindeligt kort
+function makePixelScreen() {
+  var wrap = el('div', 'pixel-screen');
+  return { tv: wrap, screen: wrap };
+}
+
 var Ambient = (function () {
   var root = document.getElementById('ambient');
   var layers = [el('div', 'amb-layer'), el('div', 'amb-layer')];
@@ -976,7 +1002,7 @@ var Ambient = (function () {
         v.classList.add('pixel-src');
         pc = document.createElement('canvas');
         pctx = pc.getContext('2d');
-        pcWrap = makeCrtTv();
+        pcWrap = spec.crtFrame === false ? makePixelScreen() : makeCrtTv();
         pcWrap.screen.appendChild(pc);
       }
 
@@ -1683,6 +1709,7 @@ var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
       video: urls,
       videoStart: g.start,
       pixelated: true, // testens vinder: pixel-perfekt C64-rendering
+      crtFrame: false, // rent skaermpanel, intet fjernsyns-kabinet
       onVideoFail: function () {
         // Alle kandidater fejlede: slaa filnavnet op som sidste udvej
         if (g.resolved || !g.item) return;
