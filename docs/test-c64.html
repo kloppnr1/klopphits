@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C64-visningstest – KloppHits</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: #050507;
+    color: #f5f5f7;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    user-select: none;
+  }
+
+  #stage { position: fixed; inset: 0; background: #000; }
+
+  /* Kildevideoen (bruges direkte i video-tilstande, skjult i canvas-tilstande) */
+  #vid {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    display: none;
+  }
+  /* Sloeret bagvideo til blur-fill-tilstanden */
+  #vidbg {
+    position: absolute; inset: -5%;
+    width: 110%; height: 110%;
+    object-fit: cover;
+    filter: blur(38px) brightness(0.45) saturate(1.1);
+    display: none;
+  }
+  /* Canvas til pixel-perfekte tilstande */
+  #cnv {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    display: none;
+  }
+
+  /* Tilstande */
+  body.m-cover #vid { display: block; object-fit: cover; }
+  body.m-contain #vid { display: block; object-fit: contain; }
+  body.m-blur #vid { display: block; object-fit: contain; }
+  body.m-blur #vidbg { display: block; }
+  body.m-pixel #cnv, body.m-scan #cnv, body.m-crt #cnv { display: block; image-rendering: pixelated; }
+  body.m-crt #cnv { filter: contrast(1.12) saturate(1.22) brightness(1.02); }
+
+  /* Scanlines + vignet (over hele scenen; usynlige over sorte bjaelker) */
+  #scan {
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.28) 0 2px, transparent 2px 5px);
+    pointer-events: none;
+    display: none;
+  }
+  body.m-scan #scan, body.m-crt #scan { display: block; }
+  #vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(115% 115% at 50% 48%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+    pointer-events: none;
+    display: none;
+  }
+  body.m-crt #vignette { display: block; }
+
+  /* UI */
+  #label {
+    position: fixed; top: 3vh; left: 50%; transform: translateX(-50%);
+    background: rgba(20, 20, 24, 0.85);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 1rem;
+    padding: 0.9rem 1.8rem;
+    text-align: center;
+    max-width: 84vw;
+    z-index: 10;
+  }
+  #label .num { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.12em; color: rgba(235,235,245,0.6); }
+  #label .name { font-size: 1.5rem; font-weight: 700; margin: 0.15rem 0; }
+  #label .desc { font-size: 0.98rem; color: rgba(235,235,245,0.62); }
+  #hint {
+    position: fixed; bottom: 3vh; left: 50%; transform: translateX(-50%);
+    font-size: 1rem; color: rgba(235,235,245,0.55);
+    background: rgba(20,20,24,0.7);
+    padding: 0.5rem 1.3rem; border-radius: 999px;
+    z-index: 10;
+  }
+  #status {
+    position: fixed; top: 3vh; right: 3vw;
+    font-size: 0.9rem; color: rgba(235,235,245,0.45);
+    z-index: 10;
+  }
+</style>
+</head>
+<body class="m-cover">
+<div id="stage">
+  <video id="vidbg" muted autoplay playsinline loop></video>
+  <video id="vid" muted autoplay playsinline></video>
+  <canvas id="cnv"></canvas>
+  <div id="scan"></div>
+  <div id="vignette"></div>
+</div>
+<div id="label">
+  <div class="num"></div>
+  <div class="name"></div>
+  <div class="desc"></div>
+</div>
+<div id="hint">◀ ▶ skift visning &nbsp;·&nbsp; A / Enter: næste &nbsp;·&nbsp; tryk på skærmen virker også</div>
+<div id="status"></div>
+
+<script>
+'use strict';
+
+// Testmateriale: verificeret C64-longplay (Commando), 40 sek. loop midt i spillet
+var SRC = 'https://archive.org/download/commodore64longplaysvarious/Commodore_64_Longplay_Commando_EU.mp4';
+var START = 95;
+var LOOP_LEN = 40;
+
+var MODES = [
+  { cls: 'm-cover', name: 'Glat – fuld skærm (cover)', desc: 'Browserens standard-udjævning. Fylder hele skærmen, men beskærer top/bund af 4:3-billedet.' },
+  { cls: 'm-contain', name: 'Glat – hele billedet (contain)', desc: 'Hele C64-billedet bevares med sorte bjælker i siderne. Stadig udjævnet/blødt.' },
+  { cls: 'm-blur', name: 'Contain + blur-fill', desc: 'Hele billedet, og siderne fyldes af en sløret kopi af videoen (Apple TV/YouTube-stil).' },
+  { cls: 'm-pixel', name: 'Pixel-perfekt (canvas)', desc: 'Videoen tegnes på canvas og opskaleres uden udjævning: knivskarpe C64-pixels.' },
+  { cls: 'm-scan', name: 'Pixel-perfekt + scanlines', desc: 'Skarpe pixels med diskrete scanlinjer, som på et gammelt billedrør.' },
+  { cls: 'm-crt', name: 'CRT-look', desc: 'Pixels + scanlines + vignet og let farve-/kontrastboost: fjernsynet i 1988.' }
+];
+
+var vid = document.getElementById('vid');
+var vidbg = document.getElementById('vidbg');
+var cnv = document.getElementById('cnv');
+var ctx = cnv.getContext('2d');
+var statusEl = document.getElementById('status');
+
+var mode = 0;
+
+function setMode(i) {
+  mode = (i + MODES.length) % MODES.length;
+  var m = MODES[mode];
+  document.body.className = m.cls;
+  document.querySelector('#label .num').textContent = (mode + 1) + ' / ' + MODES.length;
+  document.querySelector('#label .name').textContent = m.name;
+  document.querySelector('#label .desc').textContent = m.desc;
+  // Synk sloeret bagvideo, naar den taendes
+  if (m.cls === 'm-blur') vidbg.currentTime = vid.currentTime;
+}
+
+// Videokilde + segment-loop
+vid.src = SRC + '#t=' + START;
+vidbg.src = SRC + '#t=' + START;
+vid.addEventListener('timeupdate', function () {
+  if (vid.currentTime > START + LOOP_LEN) {
+    vid.currentTime = START;
+    vidbg.currentTime = START;
+  }
+  // Hold bagvideoen nogenlunde i synk
+  if (Math.abs(vidbg.currentTime - vid.currentTime) > 0.5) {
+    vidbg.currentTime = vid.currentTime;
+  }
+});
+vid.addEventListener('error', function () {
+  statusEl.textContent = 'Kunne ikke hente testvideoen (archive.org)';
+});
+vid.addEventListener('loadedmetadata', function () {
+  cnv.width = vid.videoWidth;
+  cnv.height = vid.videoHeight;
+  statusEl.textContent = 'Kilde: ' + vid.videoWidth + '×' + vid.videoHeight + ' · archive.org';
+});
+
+// Canvas-tegneloekke (pixel-tilstandene)
+function draw() {
+  if (document.body.className.indexOf('m-pixel') !== -1 ||
+      document.body.className.indexOf('m-scan') !== -1 ||
+      document.body.className.indexOf('m-crt') !== -1) {
+    if (vid.videoWidth) ctx.drawImage(vid, 0, 0, cnv.width, cnv.height);
+  }
+  if (vid.requestVideoFrameCallback) {
+    vid.requestVideoFrameCallback(draw);
+  } else {
+    requestAnimationFrame(draw);
+  }
+}
+draw();
+
+// Input: controller + tastatur + touch
+var BUTTON_MAP = { 0: 'next', 14: 'prev', 15: 'next' };
+var held = {};
+function poll() {
+  var pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  var active = {};
+  for (var p = 0; p < pads.length; p++) {
+    var pad = pads[p];
+    if (!pad) continue;
+    for (var i = 0; i < pad.buttons.length; i++) {
+      if (pad.buttons[i].pressed && BUTTON_MAP[i]) active[BUTTON_MAP[i]] = 1;
+    }
+    if (pad.axes.length >= 1) {
+      if (pad.axes[0] < -0.6) active.prev = 1;
+      if (pad.axes[0] > 0.6) active.next = 1;
+    }
+  }
+  for (var a in active) {
+    if (!held[a]) {
+      held[a] = 1;
+      setMode(mode + (a === 'prev' ? -1 : 1));
+    }
+  }
+  for (var h in held) { if (!active[h]) delete held[h]; }
+  requestAnimationFrame(poll);
+}
+poll();
+
+window.addEventListener('keydown', function (ev) {
+  if (ev.key === 'ArrowRight' || ev.key === 'Enter') { ev.preventDefault(); setMode(mode + 1); }
+  else if (ev.key === 'ArrowLeft') { ev.preventDefault(); setMode(mode - 1); }
+});
+document.addEventListener('click', function () { setMode(mode + 1); });
+
+setMode(0);
+</script>
+</body>
+</html>
