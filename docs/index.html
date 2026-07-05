@@ -490,6 +490,16 @@
     width: 100%; height: 100%;
     object-fit: cover;
   }
+  /* Retro-covers scannede kassetter/aesker fra flere aera - deres
+     naturlige mal varierer meget. "cover" beskar dem forskelligt
+     aggressivt og fik dem til at virke som forskellige stoerrelser;
+     "contain" viser altid HELE coveret i samme skala, paa en ensartet
+     mork bund */
+  .tile.steam-tile img.cover.retro-cover {
+    object-fit: contain;
+    background: #0d0b10;
+    padding: 0.4rem;
+  }
   .tile.steam-tile .fallback {
     position: absolute; inset: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -1146,9 +1156,9 @@ var LONGPLAYS = [
     ],
     item: 'TheFirstC64LongplaySerie_3', match: /boulder/i,
     start: 120, scene: scene(35, 60, '💎') },
-  { name: 'Commando', sub: 'Elite, 1985', file: 'Commodore_64_Longplay_Commando_EU.mp4', start: 95, scene: scene(20, 350, '🪖') },
-  { name: 'Cybernoid', sub: 'Hewson, 1988', file: 'Commodore_64_Longplay_Cybernoid_EU.mp4', start: 80, scene: scene(280, 230, '🚀') },
-  { name: 'Bionic Commando', sub: 'Capcom, 1988', file: 'Commodore_64_Longplay_Bionic_Commando_EU.mp4', start: 90, scene: scene(120, 90, '🦾') },
+  { name: 'Commando', sub: 'Elite, 1985', cover: c64CoverUrl(329), file: 'Commodore_64_Longplay_Commando_EU.mp4', start: 95, scene: scene(20, 350, '🪖') },
+  { name: 'Cybernoid', sub: 'Hewson, 1988', cover: c64CoverUrl(369), file: 'Commodore_64_Longplay_Cybernoid_EU.mp4', start: 80, scene: scene(280, 230, '🚀') },
+  { name: 'Bionic Commando', sub: 'Capcom, 1988', cover: c64CoverUrl(169), file: 'Commodore_64_Longplay_Bionic_Commando_EU.mp4', start: 90, scene: scene(120, 90, '🦾') },
   { name: 'RoboCop', sub: 'Ocean, 1988', cover: c64CoverUrl(1309),
     urls: [
       // Verificeret direkte link
@@ -1521,7 +1531,7 @@ var retroScreen = makeSection('retro', 'Retro spil',
       fb.appendChild(el('div', 'name', g.name));
       tile.appendChild(fb);
       if (g.cover) {
-        var cover = el('img', 'cover');
+        var cover = el('img', 'cover retro-cover');
         cover.alt = g.name;
         cover.loading = 'lazy';
         cover.addEventListener('error', function () { cover.remove(); });
