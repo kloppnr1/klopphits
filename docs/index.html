@@ -158,8 +158,8 @@
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    gap: clamp(2.6rem, 6.3vw, 6.3rem);
-    padding-top: calc(13vh + var(--safe-y));
+    gap: clamp(3rem, 7.2vw, 7.2rem);
+    padding-top: calc(9vh + var(--safe-y));
     padding-left: calc(3vw + var(--safe-x));
     padding-right: calc(3vw + var(--safe-x));
   }
@@ -168,13 +168,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.6rem;
+    gap: 1.9rem;
   }
   /* Cover og skaerm-panel deler samme hoejde og topkant, saa de to kort
-     staar paent paa linje i stedet for at svaeve forskudt af hinanden */
+     staar paent paa linje i stedet for at svaeve forskudt af hinanden.
+     Der er masser af luft paa skaermen, saa begge er gjort meget store */
   #ambient .amb-layer .amb-split .amb-split-poster .art-fg {
     position: static;
-    height: 55vh;
+    height: 64vh;
     width: auto;
     aspect-ratio: 2 / 3;
     object-fit: contain;
@@ -186,19 +187,19 @@
   }
   #ambient .amb-layer .amb-split .amb-caption {
     position: static;
-    max-width: 27vh;
+    max-width: 32vh;
     text-align: center;
     text-shadow: none;
   }
-  #ambient .amb-layer .amb-split .amb-caption .amb-caption-title { font-size: 2.4rem; }
-  #ambient .amb-layer .amb-split .amb-caption .amb-caption-sub { font-size: 1.2rem; margin-top: 0.5rem; }
+  #ambient .amb-layer .amb-split .amb-caption .amb-caption-title { font-size: 2.9rem; }
+  #ambient .amb-layer .amb-split .amb-caption .amb-caption-sub { font-size: 1.4rem; margin-top: 0.5rem; }
   #ambient .amb-layer .amb-split .amb-split-screen { flex: 0 0 auto; }
   /* CRT-rammen droppet for split-layoutet - rent skaermpanel i stedet,
      samme hoejde som coveret ved siden af. Altid synligt (ikke afhaengigt
      af 'on'), saa loadeskaermen indeni kan ses foer videoen er klar */
   #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen {
     position: relative;
-    height: 55vh;
+    height: 64vh;
     aspect-ratio: 4 / 3;
     background: #000;
     border-radius: 1rem;
@@ -210,6 +211,31 @@
     width: 100%; height: 100%;
     object-fit: contain;
     image-rendering: pixelated;
+  }
+  /* Play-knap: vises i skaermpanelet, indtil brugeren rent faktisk
+     vaelger at starte spillet */
+  #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen .amb-play-btn {
+    position: absolute; inset: 0;
+    margin: auto;
+    width: fit-content; height: fit-content;
+    display: flex; align-items: center; gap: 0.8rem;
+    padding: 1.1rem 2.2rem;
+    border: none; border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(16px);
+    color: #fff;
+    font: inherit; font-size: 1.5rem; font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 0.9rem 2.2rem rgba(0, 0, 0, 0.55), inset 0 0 0 1.5px rgba(255, 255, 255, 0.28);
+    transition: transform 0.2s ease, background-color 0.2s ease;
+  }
+  #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen .amb-play-btn:hover,
+  #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen .amb-play-btn:focus-visible {
+    background: rgba(255, 255, 255, 0.24);
+    transform: scale(1.05);
+  }
+  #ambient .amb-layer .amb-split .amb-split-screen .pixel-screen .amb-play-btn svg {
+    width: 1.9rem; height: 1.9rem;
   }
   #ambient .amb-layer video.hero-video {
     position: absolute; inset: 0;
@@ -926,6 +952,7 @@ var Ambient = (function () {
   // force: vis igen selv om noeglen er uaendret (bruges til A = afspil igen)
   function show(key, spec, force) {
     if ((key === currentKey && !force) || !spec) return;
+    var publicHandle = null;
     currentKey = key;
     if (!spec.keepCinema) document.body.classList.remove('cinema');
     active = 1 - active;
@@ -1024,50 +1051,96 @@ var Ambient = (function () {
       }
 
       // Pixel-perfekt rendering: video skjules, tegnes paa canvas i stedet
-      var pc = null, pctx = null, pcWrap = null, loadingEl = null;
+      var pc = null, pctx = null, pcWrap = null, overlayEl = null, playBtn = null;
       if (spec.pixelated) {
         v.classList.add('pixel-src');
         pc = document.createElement('canvas');
         pctx = pc.getContext('2d');
         pcWrap = spec.crtFrame === false ? makePixelScreen() : makeCrtTv();
-        // C64-loadeskaerm - vises straks og bliver staaende, indtil videoen
-        // rent faktisk er klar til at spille (ingen fast varighed/ritual)
-        loadingEl = document.createElement('div');
-        loadingEl.className = 'c64-boot pixel-loading';
+        if (spec.playGate) {
+          // Vent paa et eksplicit Play-tryk, i stedet for at starte af sig selv
+          playBtn = document.createElement('button');
+          playBtn.type = 'button';
+          playBtn.className = 'amb-play-btn';
+          playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>Play</span>';
+          playBtn.addEventListener('click', function () { startPlayback(); });
+          pcWrap.screen.appendChild(playBtn);
+        } else {
+          showLoadingIndicator();
+        }
+        pcWrap.screen.appendChild(pc);
+      }
+
+      function removeOverlay() {
+        if (!overlayEl) return;
+        var oe = overlayEl;
+        overlayEl = null;
+        oe.classList.add('skjult');
+        setTimeout(function () { oe.remove(); }, 400);
+      }
+
+      // C64-loadeskaerm - bliver staaende, indtil videoen rent faktisk er
+      // klar til at spille (ingen fast varighed)
+      function showLoadingIndicator() {
+        overlayEl = document.createElement('div');
+        overlayEl.className = 'c64-boot pixel-loading';
         var loadField = document.createElement('div');
         loadField.className = 'c64-field';
         var loadText = document.createElement('pre');
         loadText.className = 'c64-text';
-        loadText.textContent = 'LOADING';
-        loadText.appendChild(document.createTextNode(' '));
+        loadText.appendChild(document.createTextNode('LOADING '));
         loadText.appendChild(el('span', 'c64-cursor'));
         loadField.appendChild(loadText);
-        loadingEl.appendChild(loadField);
-        pcWrap.screen.appendChild(loadingEl);
-        pcWrap.screen.appendChild(pc);
+        overlayEl.appendChild(loadField);
+        pcWrap.screen.appendChild(overlayEl);
       }
 
-      function removeLoading() {
-        if (!loadingEl) return;
-        var le = loadingEl;
-        loadingEl = null;
-        le.classList.add('skjult');
-        setTimeout(function () { le.remove(); }, 400);
+      // Fuldt C64-boot-ritual (LOAD "NAVN",8,1 / SEARCHING / LOADING / READY.),
+      // skrevet tegn for tegn som paa den aegte maskine
+      function runBootRitual(name, onDone) {
+        overlayEl = document.createElement('div');
+        overlayEl.className = 'c64-boot pixel-loading';
+        var field = document.createElement('div');
+        field.className = 'c64-field';
+        var pre = document.createElement('pre');
+        pre.className = 'c64-text';
+        var cur = el('span', 'c64-cursor');
+        pre.appendChild(cur);
+        field.appendChild(pre);
+        overlayEl.appendChild(field);
+        pcWrap.screen.appendChild(overlayEl);
+
+        function addText(s) { pre.insertBefore(document.createTextNode(s), cur); }
+        var t = 250;
+        var line = 'LOAD "' + name + '",8,1';
+        for (var ci = 0; ci < line.length; ci++) {
+          (function (ch, tt) { setTimeout(function () { addText(ch); }, tt); })(line[ci], t);
+          t += 42;
+        }
+        t += 300; setTimeout(function () { addText('\n\nSEARCHING FOR ' + name + '\n'); }, t);
+        t += 600; setTimeout(function () { addText('LOADING\n'); }, t);
+        t += 650; setTimeout(function () { addText('READY.\n'); onDone(); }, t);
       }
 
-      // Coveret fader vaek, mens previewet koerer, og vender tilbage bagefter
-      // - medmindre spec.keepArt beder om at det altid skal blive staaende
-      function artEl() { return layer.querySelector('.art-fg'); }
-      v.addEventListener('playing', function () {
+      // Afsloeringen venter paa BAADE at videoen rent faktisk spiller OG at
+      // boot-ritualet (hvis noget) er faerdigt - alt efter hvad der er langsomst
+      var videoReady = false, bootDone = true;
+      function tryReveal() {
+        if (!videoReady || !bootDone) return;
         v.classList.add('on');
         if (pcWrap) pcWrap.tv.classList.add('on');
-        removeLoading();
+        removeOverlay();
         if (!spec.keepArt) {
           var art = artEl();
           if (art) art.classList.add('skjult');
         }
         document.body.classList.add('cinema');
-      });
+      }
+
+      // Coveret fader vaek, mens previewet koerer, og vender tilbage bagefter
+      // - medmindre spec.keepArt beder om at det altid skal blive staaende
+      function artEl() { return layer.querySelector('.art-fg'); }
+      v.addEventListener('playing', function () { videoReady = true; tryReveal(); });
       // Afspil een gang (eller til preview-loftet) og fald roligt tilbage
       function endPreview() {
         document.body.classList.remove('cinema');
@@ -1114,10 +1187,28 @@ var Ambient = (function () {
         document.body.classList.remove('cinema');
         v.remove();
         if (pcWrap) pcWrap.tv.remove();
-        removeLoading();
+        removeOverlay();
         if (spec.onVideoFail) spec.onVideoFail();
       }); // stillbilledet bliver staaende
-      setSrc();
+
+      // Starter selve hentningen/afspilningen - enten straks, eller foerst
+      // naar spec.playGate's Play-knap trykkes
+      function startPlayback() {
+        if (playBtn) { playBtn.remove(); playBtn = null; }
+        if (spec.bootName) {
+          bootDone = false;
+          runBootRitual(spec.bootName, function () { bootDone = true; tryReveal(); });
+        } else if (!overlayEl) {
+          showLoadingIndicator();
+        }
+        setSrc();
+      }
+
+      if (spec.playGate) {
+        publicHandle = { startPlayback: startPlayback };
+      } else {
+        setSrc();
+      }
       screenHost.appendChild(v);
       if (pcWrap) {
         screenHost.appendChild(pcWrap.tv);
@@ -1141,6 +1232,7 @@ var Ambient = (function () {
     setTimeout(function () {
       if (!hidden.classList.contains('visible')) stopVideo(hidden);
     }, 1400);
+    return publicHandle;
   }
   return { show: show, stopPreview: stopPreview, isPreviewing: isPreviewing };
 })();
@@ -1183,7 +1275,6 @@ var RETRO_ART_HERO = SVG_OPEN +
   '<rect x="-300" y="524" width="2600" height="56" fill="#7fe07f"/>' +
   '<rect x="-300" y="580" width="2600" height="56" fill="#6a8de0"/>' +
   '</g>' +
-  '<g transform="translate(90,730) scale(10)" opacity="0.1"><path d="' + INVADER_PATH + '" fill="#e0c04a"/></g>' +
   '</svg>';
 
 var RETRO_WALL = [
@@ -1746,9 +1837,10 @@ var retroScreen = makeSection('retro', 'Retro spil',
 // samme. Samme statiske regnbue-baggrund som gitteret.
 var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
   var current = null;
+  var playHandle = null; // { startPlayback } - sat naar der er noget at spille
 
   function attempt(g, i, urls) {
-    Ambient.show('retro-play:' + i, {
+    return Ambient.show('retro-play:' + i, {
       svg: RETRO_ART_HERO,
       img: g.cover,
       imgArt: true,
@@ -1760,6 +1852,8 @@ var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
       videoStart: g.start,
       pixelated: true, // testens vinder: pixel-perfekt C64-rendering
       crtFrame: false, // rent skaermpanel, intet fjernsyns-kabinet
+      playGate: true, // vent paa Play-knappen, start ikke af sig selv
+      bootName: g.name.toUpperCase(), // fuldt C64-boot-ritual naar der trykkes Play
       onVideoFail: function () {
         // Alle kandidater fejlede: slaa filnavnet op som sidste udvej
         if (g.resolved || !g.item) return;
@@ -1767,7 +1861,8 @@ var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
         resolveArchiveMp4(g.item, g.match).then(function (url) {
           if (url && current === i && document.body.dataset.screen === 'retro-play') {
             g.urls = [url];
-            attempt(g, i, g.urls);
+            // Brugeren har allerede trykket Play denne omgang - fortsaet automatisk
+            attempt(g, i, g.urls).startPlayback();
           }
         });
       }
@@ -1776,18 +1871,19 @@ var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
 
   function play(i) {
     current = i;
+    playHandle = null;
     var g = LONGPLAYS[i];
     var candidates = g.urls || (g.url ? [g.url] : null);
     var stillSpec = { svg: RETRO_ART_HERO, img: g.cover, imgArt: true, caption: { title: g.name, sub: g.sub }, splitLayout: true };
     if (candidates) {
-      attempt(g, i, candidates);
+      playHandle = attempt(g, i, candidates);
     } else if (g.item && !g.resolved) {
-      // Intet gaettet filnavn - vis coveret straks og slaa det rigtige
-      // filnavn op via metadata-API'et, saa videoen kan koble sig paa
+      // Intet gaettet filnavn - vis coveret straks (uden Play-knap endnu) og
+      // slaa det rigtige filnavn op via metadata-API'et
       g.resolved = true;
       Ambient.show('retro-play:' + i, stillSpec, true);
       resolveArchiveMp4(g.item, g.match).then(function (url) {
-        if (url && current === i) { g.urls = [url]; attempt(g, i, g.urls); }
+        if (url && current === i) { g.urls = [url]; playHandle = attempt(g, i, g.urls); }
       });
     } else {
       Ambient.show('retro-play:' + i, stillSpec, true);
@@ -1801,9 +1897,12 @@ var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
   screen.leave = function () {
     Ambient.stopPreview();
     current = null;
+    playHandle = null;
   };
   screen.onInput = function (action) {
-    if (action === 'b') {
+    if (action === 'a') {
+      if (playHandle) { playHandle.startPlayback(); }
+    } else if (action === 'b') {
       document.body.classList.remove('cinema');
       Screens.pop();
     }
