@@ -728,6 +728,22 @@ var Ambient = (function () {
   var active = 0;
   var currentKey = null;
 
+  // Browseren kraever en aegte brugerhandling (tastatur/touch - IKKE
+  // gamepad-polling) foer lyd maa afspilles. Naar den forste rigtige
+  // handling registreres, forsoeger vi at lyde de(n) video, der koerer.
+  var userActivated = false;
+  var unmuteWhenActivated = [];
+  function onRealGesture() {
+    userActivated = true;
+    unmuteWhenActivated.splice(0).forEach(function (v) {
+      if (!v.isConnected) return;
+      v.muted = false;
+      v.play && v.play().catch(function () {});
+    });
+  }
+  window.addEventListener('keydown', onRealGesture, { once: true });
+  window.addEventListener('pointerdown', onRealGesture, { once: true });
+
   function stopVideo(layer) {
     var v = layer.querySelector('video');
     if (v) {
@@ -803,13 +819,18 @@ var Ambient = (function () {
     if (spec.video) {
       var v = document.createElement('video');
       v.className = 'hero-video';
-      v.muted = true;
       v.autoplay = true;
       v.playsInline = true;
       // iOS/Safari kraever attributterne (ikke kun egenskaberne) for autoplay
-      v.setAttribute('muted', '');
       v.setAttribute('autoplay', '');
       v.setAttribute('playsinline', '');
+      // Afspil med lyd, hvis en aegte bruger-handling har fundet sted (tastatur/touch);
+      // ellers maa den starte muted (browserkrav) og lydes, naar handlingen kommer
+      if (!userActivated) {
+        v.muted = true;
+        v.setAttribute('muted', '');
+        unmuteWhenActivated.push(v);
+      }
 
       // Pixel-perfekt rendering: video skjules, tegnes paa canvas i stedet
       var pc = null, pctx = null, pcWrap = null;
@@ -854,7 +875,18 @@ var Ambient = (function () {
       var si = 0;
       function setSrc() {
         v.src = spec.videoStart ? srcs[si] + '#t=' + spec.videoStart : srcs[si];
-        if (v.play) v.play().catch(function () {});
+        if (v.play) {
+          v.play().catch(function () {
+            // Autoplay med lyd blev afvist - fald tilbage til muted, saa previewet
+            // i det mindste vises; lydes naar en aegte bruger-handling kommer
+            if (!v.muted) {
+              v.muted = true;
+              v.setAttribute('muted', '');
+              if (unmuteWhenActivated.indexOf(v) === -1) unmuteWhenActivated.push(v);
+              v.play().catch(function () {});
+            }
+          });
+        }
       }
       v.addEventListener('error', function () {
         si++;
@@ -1072,26 +1104,13 @@ function resolveArchiveMp4(item, match) {
 }
 
 var LONGPLAY_BASE = 'https://archive.org/download/commodore64longplaysvarious/';
-// Brugerens fire titler foerst (cover art fra coverbrowser; longplay-URL
-// kobles paa, naar download-linket kendes). Derefter tre titler med
-// verificerede longplays fra MadMatty-samlingen.
+// Rakkefoelge: titler med kendt god longplay-afspilning foerst.
+// RoboCop og Skate or Die er rykket bagerst - deres videoer har
+// vist sig upaalidelige paa TV'et (fejlgaettede filnavne i det
+// Tyrkiske Oyun-Video-arkiv). De laener sig nu udelukkende op ad
+// archive.org's CORS-aabne metadata-API (resolveArchiveMp4) i stedet
+// for gaettede URL'er, saa det rigtige filnavn slaas op ved runtime.
 var LONGPLAYS = [
-  { name: 'RoboCop', sub: 'Ocean, 1988', cover: c64CoverUrl(1309),
-    urls: [
-      'https://archive.org/download/Commodore-64-Oyun-Video/00057-Robocop%20(C64)(LongPlays).mp4',
-      'https://archive.org/download/Commodore-64-Oyun-Video/00057-RoboCop%20(C64)(LongPlays).mp4',
-      'https://archive.org/download/Commodore-64-Oyun-Video/00057%20-%20Robocop%20(C64)(LongPlays).mp4'
-    ],
-    item: 'Commodore-64-Oyun-Video', match: /robocop/i,
-    start: 180, scene: scene(210, 0, '🤖') },
-  { name: 'Skate or Die', sub: 'Electronic Arts, 1987', cover: c64CoverUrl(1420),
-    urls: [
-      'https://archive.org/download/Commodore-64-Oyun-Video/00410-Skate%20Or%20Die%20(C64)(LongPlays).mp4',
-      'https://archive.org/download/Commodore-64-Oyun-Video/00410-Skate%20or%20Die%20(C64)(LongPlays).mp4',
-      'https://archive.org/download/Commodore-64-Oyun-Video/00410-Skate%20Or%20Die!%20(C64)(LongPlays).mp4'
-    ],
-    item: 'Commodore-64-Oyun-Video', match: /skate/i,
-    start: 150, scene: scene(280, 320, '🛹') },
   { name: '1942', sub: 'Elite, 1986', cover: c64CoverUrl(4),
     urls: [
       'https://archive.org/download/C64GVA302-1942/C64-Gamevideoarchive302-1942_512kb.mp4',
@@ -1111,7 +1130,18 @@ var LONGPLAYS = [
     start: 120, scene: scene(35, 60, '💎') },
   { name: 'Commando', sub: 'Elite, 1985', file: 'Commodore_64_Longplay_Commando_EU.mp4', start: 95, scene: scene(20, 350, '🪖') },
   { name: 'Cybernoid', sub: 'Hewson, 1988', file: 'Commodore_64_Longplay_Cybernoid_EU.mp4', start: 80, scene: scene(280, 230, '🚀') },
-  { name: 'Bionic Commando', sub: 'Capcom, 1988', file: 'Commodore_64_Longplay_Bionic_Commando_EU.mp4', start: 90, scene: scene(120, 90, '🦾') }
+  { name: 'Bionic Commando', sub: 'Capcom, 1988', file: 'Commodore_64_Longplay_Bionic_Commando_EU.mp4', start: 90, scene: scene(120, 90, '🦾') },
+  { name: 'RoboCop', sub: 'Ocean, 1988', cover: c64CoverUrl(1309),
+    urls: [
+      // Verificeret direkte link
+      'https://archive.org/download/commodore64longplaysoceanimagine/Commodore_64_Longplay_-_Robocop_-_EU.mp4'
+    ],
+    item: 'commodore64longplaysoceanimagine', match: /robocop/i,
+    start: 180, scene: scene(210, 0, '🤖') },
+  { name: 'Skate or Die', sub: 'Electronic Arts, 1987', cover: c64CoverUrl(1420),
+    // Intet gaettet filnavn kendt - slaas op via metadata-API'et (resolveArchiveMp4)
+    item: 'Commodore-64-Oyun-Video', match: /skate/i,
+    start: 150, scene: scene(280, 320, '🛹') }
 ].map(function (g) {
   if (g.file) g.url = LONGPLAY_BASE + g.file;
   return g;
@@ -1541,6 +1571,18 @@ var retroScreen = makeScreen('retro', function (screen, root) {
 
     if (candidates) {
       play(force, candidates);
+    } else if (g.item && !g.resolved) {
+      // Intet gaettet filnavn - vis coveret straks og slaa det rigtige
+      // filnavn op via metadata-API'et, saa videoen kan koble sig paa
+      g.resolved = true;
+      Ambient.show('retro:' + i, { svg: RETRO_ART_HERO, img: g.cover, imgArt: true }, force);
+      resolveArchiveMp4(g.item, g.match).then(function (url) {
+        if (url && focus.index === i && document.body.dataset.screen === 'retro') {
+          g.urls = [url];
+          syncHero();
+          play(true, g.urls);
+        }
+      });
     } else {
       Ambient.show('retro:' + i, { svg: RETRO_ART_HERO, img: g.cover, imgArt: true }, force);
     }
