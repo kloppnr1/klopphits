@@ -101,6 +101,11 @@
     transition: opacity 0.5s ease;
   }
   .cover-wall .cw img.on { opacity: 1; }
+  .cover-wall .cw svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+  }
+  .cover-wall.retro-wall { background: #0a0612; }
   @keyframes slowZoom {
     from { transform: scale(1); }
     to { transform: scale(1.07); }
@@ -632,6 +637,69 @@ var VIDEOS = [
   };
 });
 
+// Retro-katalog: haandtegnede kassette-/label-covers i fire aera-stilarter
+// (Atari-label, C64-baand, arkade-marquee, MS-DOS-boks). Fiktive titler.
+var INVADER_PATH = 'M5 4h2v2H5zM17 4h2v2h-2zM7 6h2v2H7zM15 6h2v2h-2zM5 8h14v2H5zM3 10h4v2H3zM9 10h6v2H9zM17 10h4v2h-4zM1 12h22v2H1zM1 14h2v2H1zM5 14h14v2H5zM21 14h2v2h-2zM1 16h2v2H1zM5 16h2v2H5zM17 16h2v2h-2zM21 16h2v2h-2zM7 18h4v2H7zM13 18h4v2h-4z';
+
+var RETRO_WALL = [
+  { t: 'STAR RAID', sys: 'ARCADE', style: 'marquee', c: '#ff4dd2' },
+  { t: 'PIXEL KART', sys: 'ATARI 2600', style: 'atari', c: '#e8722e' },
+  { t: 'MEGA BLAST', sys: 'COMMODORE 64', style: 'c64', c: '#6a8de0' },
+  { t: 'CAVE QUEST', sys: 'MS-DOS', style: 'dos', c: '#4de3a0' },
+  { t: 'NEON RALLY', sys: 'ARCADE', style: 'marquee', c: '#37d0e6' },
+  { t: 'ROBO RUN', sys: 'ATARI 2600', style: 'atari', c: '#d44a4a' },
+  { t: 'ASTRO DUEL', sys: 'COMMODORE 64', style: 'c64', c: '#b08de0' },
+  { t: 'MAZE LORD', sys: 'MS-DOS', style: 'dos', c: '#e0c04a' },
+  { t: 'TURBO SKI', sys: 'ARCADE', style: 'marquee', c: '#7fe07f' },
+  { t: 'DISK WARS', sys: 'ATARI 2600', style: 'atari', c: '#e08cc0' }
+];
+
+function retroCoverSvg(g) {
+  var words = g.t.split(' ');
+  function txt(y, size, fill, s, ls) {
+    return '<text x="100" y="' + y + '" text-anchor="middle" font-family="Courier New, monospace" font-weight="700" font-size="' + size + '" fill="' + fill + '"' + (ls ? ' letter-spacing="' + ls + '"' : '') + '>' + s + '</text>';
+  }
+  var inv = '<g transform="translate(52,74) scale(4)"><path d="' + INVADER_PATH + '" fill="' + g.c + '"/></g>';
+  var title = txt(220, 23, '#f2f2f5', words[0]) + (words[1] ? txt(246, 23, '#f2f2f5', words[1]) : '');
+  var sysbar = '<rect x="0" y="270" width="200" height="30" fill="rgba(255,255,255,0.09)"/>' + txt(290, 11, 'rgba(255,255,255,0.6)', g.sys, 2);
+  var body = '';
+  if (g.style === 'atari') {
+    var cols = ['#d44a4a', '#e8722e', '#e0c04a', '#7fe07f', '#37d0e6', '#b08de0'];
+    body = '<rect width="200" height="300" fill="#16131a"/>';
+    for (var i = 0; i < 6; i++) {
+      body += '<rect x="' + (28 + i * 24) + '" y="0" width="8" height="300" fill="' + cols[i] + '" opacity="0.5"/>';
+    }
+    body += '<rect x="16" y="52" width="168" height="150" fill="#0c0a10"/>' +
+      '<rect x="0" y="196" width="200" height="74" fill="#16131a"/>' + inv;
+  } else if (g.style === 'c64') {
+    body = '<rect width="200" height="300" fill="#241d18"/>' +
+      '<g transform="rotate(-20 100 150)">' +
+      '<rect x="-40" y="46" width="280" height="10" fill="#d44a4a"/>' +
+      '<rect x="-40" y="58" width="280" height="10" fill="#e8722e"/>' +
+      '<rect x="-40" y="70" width="280" height="10" fill="#e0c04a"/>' +
+      '<rect x="-40" y="82" width="280" height="10" fill="#7fe07f"/>' +
+      '<rect x="-40" y="94" width="280" height="10" fill="#6a8de0"/>' +
+      '</g>' + inv;
+  } else if (g.style === 'dos') {
+    body = '<rect width="200" height="300" fill="#060608"/>' +
+      '<rect x="6" y="6" width="188" height="288" fill="none" stroke="' + g.c + '" stroke-width="3"/>' + inv;
+  } else { // arkade-marquee
+    body = '<rect width="200" height="300" fill="#0d0716"/>' +
+      '<circle cx="100" cy="120" r="82" fill="' + g.c + '" opacity="0.22"/>' + inv;
+  }
+  return '<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">' + body + title + sysbar + '</svg>';
+}
+
+function makeRetroWall() {
+  var wall = el('div', 'cover-wall retro-wall');
+  RETRO_WALL.forEach(function (g) {
+    var cell = el('div', 'cw');
+    cell.innerHTML = retroCoverSvg(g);
+    wall.appendChild(cell);
+  });
+  return wall;
+}
+
 // Katalog-vaeg af covers, som paa Steams egen biblioteksside.
 // Bygges frisk pr. visning (elementet lever inde i et ambient-lag).
 function makeCoverWall() {
@@ -817,7 +885,7 @@ var homeScreen = makeScreen('home', function (screen, root) {
     heroDesc.textContent = m.desc;
     Ambient.show(m.id, {
       svg: HEROES[m.id],
-      node: m.id === 'steam' ? makeCoverWall() : undefined
+      node: m.id === 'steam' ? makeCoverWall() : (m.id === 'retro' ? makeRetroWall() : undefined)
     });
     // Hviler man paa Videoklip, starter en live-preview af foerste klip
     clearTimeout(homeVideoTimer);
