@@ -641,6 +641,10 @@ var Ambient = (function () {
       v.loop = true;
       v.autoplay = true;
       v.playsInline = true;
+      // iOS/Safari kraever attributterne (ikke kun egenskaberne) for autoplay
+      v.setAttribute('muted', '');
+      v.setAttribute('autoplay', '');
+      v.setAttribute('loop', '');
       v.setAttribute('playsinline', '');
       v.addEventListener('playing', function () { v.classList.add('on'); });
       v.addEventListener('error', function () { v.remove(); }); // SVG-scenen bliver staaende
@@ -993,6 +997,8 @@ var videosScreen = makeScreen('videos', function (screen, root) {
     var thumb = document.createElement('video');
     thumb.className = 'thumb';
     thumb.muted = true;
+    thumb.setAttribute('muted', '');
+    thumb.setAttribute('playsinline', '');
     thumb.preload = 'metadata';
     thumb.addEventListener('loadedmetadata', function () {
       item.durText = formatTime(thumb.duration);
