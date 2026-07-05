@@ -62,19 +62,29 @@
     width: 100%; height: 100%;
     object-fit: cover;
   }
-  /* Art-visning til portraet-covers: hele vaerket centreret med skygge,
-     baggrunden er en C64 boot-skaerm med personlig LOAD-tekst */
-  #ambient .amb-layer .c64-bg {
-    position: absolute; inset: 0;
-    z-index: 0;
-    background: #7869c4; /* C64-rammens lyseblaa */
+  /* Art-visning til portraet-covers: hele vaerket centreret med skygge
+     paa Commodore-brand-heroen (logo, regnbue-baand, ordmaerke) */
+
+  /* Load-sekvens: C64 boot-skaerm som start-ritual naar A trykkes */
+  #c64load {
+    position: fixed; inset: 0; z-index: 2;
+    background: #7869c4;
     display: flex; align-items: center; justify-content: center;
+    opacity: 0;
+    transition: opacity 0.35s ease;
   }
-  #ambient .amb-layer .c64-screen {
+  #c64load.on { opacity: 1; }
+  #c64load .c64-screen {
     width: 82%; height: 78%;
-    background: #40318d; /* C64-skaermens moerkeblaa */
+    background: #40318d;
     padding: 3.2rem 3.6rem;
     box-shadow: inset 0 0 7rem rgba(0, 0, 0, 0.28);
+  }
+  #c64load::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0 2px, transparent 2px 5px);
+    pointer-events: none;
   }
   .c64-text {
     font-family: 'Courier New', 'Lucida Console', monospace;
@@ -94,12 +104,6 @@
     animation: c64blink 1.06s steps(1) infinite;
   }
   @keyframes c64blink { 50% { opacity: 0; } }
-  #ambient .amb-layer .c64-bg::after {
-    content: '';
-    position: absolute; inset: 0;
-    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0 2px, transparent 2px 5px);
-    pointer-events: none;
-  }
   /* Ambient-laget er 3vw stoerre end skaermen (Ken Burns) - kompenser,
      saa coveret faar 5vh luft over og 9vh under i skaerm-koordinater */
   #ambient .amb-layer .art-fg {
@@ -627,17 +631,32 @@ var STEAM_CDN = 'https://cdn.cloudflare.steamstatic.com/steam/apps/';
 function steamHeroUrl(appid) { return STEAM_CDN + appid + '/library_hero.jpg'; }
 function steamCoverUrl(appid) { return STEAM_CDN + appid + '/library_600x900.jpg'; }
 
-function makeC64Boot(label) {
-  var name = (label || '').toUpperCase();
-  var wrap = el('div', 'c64-bg');
-  var screenEl = el('div', 'c64-screen');
-  var txt = '**** COMMODORE 64 BASIC V2 ****\n\n 64K RAM SYSTEM  38911 BASIC BYTES FREE\n\nREADY.\nLOAD "' + name + '",8,1\n\nSEARCHING FOR ' + name + '\nLOADING\nREADY.\n';
-  var pre = el('pre', 'c64-text', txt);
-  pre.appendChild(el('span', 'c64-cursor'));
-  screenEl.appendChild(pre);
-  wrap.appendChild(screenEl);
-  return wrap;
-}
+// Commodore-brand-hero: chickenhead-logoet, regnbue-baandet og
+// ordmaerket paa moerk bund - samme stil som de oevrige SVG-heroes.
+var COMMODORE_HERO = SVG_OPEN +
+  '<defs>' +
+  '<linearGradient id="cb-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d1a20"/><stop offset="1" stop-color="#0d0c10"/></linearGradient>' +
+  '<radialGradient id="cb-glow"><stop offset="0" stop-color="#d8cfc0" stop-opacity="0.10"/><stop offset="1" stop-color="#d8cfc0" stop-opacity="0"/></radialGradient>' +
+  '</defs>' +
+  '<rect width="1920" height="1080" fill="url(#cb-bg)"/>' +
+  '<ellipse cx="480" cy="420" rx="620" ry="480" fill="url(#cb-glow)"/>' +
+  // Regnbue-baandet fra C64-badget, hele vejen over sceneriet
+  '<g transform="skewY(-2)" opacity="0.92">' +
+  '<rect x="0" y="660" width="1920" height="30" fill="#d2352b"/>' +
+  '<rect x="0" y="690" width="1920" height="30" fill="#e88a2e"/>' +
+  '<rect x="0" y="720" width="1920" height="30" fill="#e8c22e"/>' +
+  '<rect x="0" y="750" width="1920" height="30" fill="#4fa55c"/>' +
+  '<rect x="0" y="780" width="1920" height="30" fill="#3e67b1"/>' +
+  '</g>' +
+  // Chickenhead-logoet: C-ring med flag, stort og roligt til venstre
+  '<g opacity="0.9">' +
+  '<path d="M 583 118 A 300 300 0 1 0 583 682" fill="none" stroke="#d8cfc0" stroke-width="118"/>' +
+  '<polygon points="540,265 830,265 830,400 470,400" fill="#d2352b"/>' +
+  '<polygon points="470,400 830,400 830,535 540,535" fill="#f2efe8"/>' +
+  '</g>' +
+  // Ordmaerket, lavmaelt nederst til hoejre
+  '<text x="1840" y="1010" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="84" letter-spacing="3" fill="#d8cfc0" opacity="0.5">commodore</text>' +
+  '</svg>';
 
 var Ambient = (function () {
   var root = document.getElementById('ambient');
@@ -688,7 +707,7 @@ var Ambient = (function () {
   function show(key, spec, force) {
     if ((key === currentKey && !force) || !spec) return;
     currentKey = key;
-    document.body.classList.remove('cinema');
+    if (!spec.keepCinema) document.body.classList.remove('cinema');
     active = 1 - active;
     var layer = layers[active];
     stopVideo(layer);
@@ -696,8 +715,7 @@ var Ambient = (function () {
     if (spec.node) layer.appendChild(spec.node);
     if (spec.img) {
       if (spec.imgArt) {
-        // C64 boot-skaerm som bagtaeppe (vises straks), coveret i front
-        layer.appendChild(makeC64Boot(spec.imgArtLabel || ''));
+        // Coveret staar paa svg-baggrunden (Commodore-heroen)
         var fg = new Image();
         fg.className = 'art-fg';
         fg.alt = '';
@@ -1083,7 +1101,10 @@ var Screens = {
   },
   pop: function () {
     var screen = this.stack.pop();
-    if (screen) screen.el.classList.remove('active');
+    if (screen) {
+      if (screen.leave) screen.leave();
+      screen.el.classList.remove('active');
+    }
     var top = this.top();
     if (top) {
       top.el.classList.add('active');
@@ -1407,10 +1428,10 @@ var retroScreen = makeScreen('retro', function (screen, root) {
 
     function play(f, urls) {
       Ambient.show('retro:' + i, {
-        svg: sceneSvg(g.scene, 'r' + i),
+        svg: COMMODORE_HERO,
         img: g.cover,
         imgArt: true,
-        imgArtLabel: g.name,
+        keepCinema: true,
         video: urls,
         videoStart: g.start,
         videoMax: 15,
@@ -1432,11 +1453,12 @@ var retroScreen = makeScreen('retro', function (screen, root) {
     if (candidates) {
       play(force, candidates);
     } else {
-      Ambient.show('retro:' + i, { svg: sceneSvg(g.scene, 'r' + i), img: g.cover, imgArt: true, imgArtLabel: g.name }, force);
+      Ambient.show('retro:' + i, { svg: COMMODORE_HERO, img: g.cover, imgArt: true }, force);
     }
   }
 
   function focusChanged() {
+    cancelLaunch();
     document.body.classList.remove('cinema'); // UI straks tilbage ved navigation
     syncHero();
     clearTimeout(previewTimer);
@@ -1445,13 +1467,70 @@ var retroScreen = makeScreen('retro', function (screen, root) {
     }, 450);
   }
 
-  // A: stop en koerende preview, eller start den fokuserede med det samme
+  // Load-sekvensen: C64-loaderen som start-ritual ved A
+  var launch = null;
+
+  function cancelLaunch() {
+    if (!launch) return;
+    launch.timers.forEach(clearTimeout);
+    var overlay = launch.el;
+    overlay.classList.remove('on');
+    setTimeout(function () { overlay.remove(); }, 380);
+    launch = null;
+  }
+
+  function startLaunch() {
+    clearTimeout(previewTimer);
+    Ambient.stopPreview();
+    cancelLaunch();
+    var g = LONGPLAYS[focus.index];
+    var name = g.name.toUpperCase();
+
+    var overlay = el('div');
+    overlay.id = 'c64load';
+    var scr = el('div', 'c64-screen');
+    var pre = el('pre', 'c64-text', 'READY.\n');
+    var cur = el('span', 'c64-cursor');
+    pre.appendChild(cur);
+    scr.appendChild(pre);
+    overlay.appendChild(scr);
+    document.body.appendChild(overlay);
+    requestAnimationFrame(function () { overlay.classList.add('on'); });
+    document.body.classList.add('cinema');
+
+    launch = { el: overlay, timers: [] };
+    var L = launch;
+    function addText(s) { pre.insertBefore(document.createTextNode(s), cur); }
+    function at(t, fn) { L.timers.push(setTimeout(fn, t)); }
+
+    // LOAD-linjen skrives tegn for tegn, som paa den aegte maskine
+    var line = 'LOAD "' + name + '",8,1';
+    var t = 300;
+    for (var ci = 0; ci < line.length; ci++) {
+      (function (ch, tt) { at(tt, function () { addText(ch); }); })(line[ci], t);
+      t += 45;
+    }
+    t += 350; at(t, function () { addText('\n\nSEARCHING FOR ' + name + '\n'); });
+    t += 650; at(t, function () { addText('LOADING\n'); });
+    t += 700; at(t, function () { addText('READY.\n'); });
+    t += 550; at(t, function () {
+      launch = null;
+      overlay.classList.remove('on');
+      setTimeout(function () { overlay.remove(); }, 380);
+      showPreview(true); // gameplay starter, naar loaderen er faerdig
+    });
+  }
+
+  // A: start spillet (load-sekvens -> gameplay); under sekvens: spring
+  // direkte til gameplay; under gameplay: stop
   function pressA() {
-    if (Ambient.isPreviewing()) {
+    if (launch) {
+      cancelLaunch();
+      showPreview(true);
+    } else if (Ambient.isPreviewing()) {
       Ambient.stopPreview();
     } else {
-      clearTimeout(previewTimer);
-      showPreview(true);
+      startLaunch();
     }
   }
 
@@ -1464,11 +1543,17 @@ var retroScreen = makeScreen('retro', function (screen, root) {
     focus.applyFocus(false);
     focusChanged();
   };
+  screen.leave = function () { cancelLaunch(); };
   screen.onInput = function (action) {
     if (action === 'left' || action === 'up') { if (focus.move('left')) focusChanged(); }
     else if (action === 'right' || action === 'down') { if (focus.move('right')) focusChanged(); }
     else if (action === 'a') pressA();
     else if (action === 'b') {
+      if (launch) {
+        cancelLaunch();
+        document.body.classList.remove('cinema');
+        return;
+      }
       clearTimeout(previewTimer);
       Screens.pop();
     }
