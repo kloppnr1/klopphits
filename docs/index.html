@@ -703,22 +703,20 @@ function retroCoverSvg(g) {
 // Aegte retro-hardware: public domain-fotos (Evan Amos / Vanamo Online
 // Game Museum) hotlinket fra Wikimedia Commons. De haandtegnede covers
 // er fallback pr. celle, hvis et foto ikke kan hentes.
+// Direkte thumb-URL'er (upload.wikimedia.org sender CORS-headere;
+// Special:FilePath-omdirigeringen goer ikke, og saa fejler frilaegningen)
 var RETRO_HARDWARE = [
-  'Commodore-64-Computer-FL.jpg',
-  'Atari-2600-Wood-4Sw-Set.jpg',
-  'NES-Console-Set.jpg',
-  'SNES-Mod1-Console-Set.jpg',
-  'Sega-Mega-Drive-JP-Mk1-Console-Set.jpg',
-  'Vectrex-Console-Set.jpg',
-  'Intellivision-Console-Set.jpg',
-  'Magnavox-Odyssey-Console-Set.jpg',
-  'Commodore-VIC-20-FL.jpg',
-  'Atari-800-Computer-FL.jpg'
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Commodore-64-Computer-FL.jpg/640px-Commodore-64-Computer-FL.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Atari-2600-Wood-4Sw-Set.jpg/640px-Atari-2600-Wood-4Sw-Set.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/NES-Console-Set.jpg/640px-NES-Console-Set.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/SNES-Mod1-Console-Set.jpg/640px-SNES-Mod1-Console-Set.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Sega-Mega-Drive-JP-Mk1-Console-Set.jpg/640px-Sega-Mega-Drive-JP-Mk1-Console-Set.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Vectrex-Console-Set.jpg/640px-Vectrex-Console-Set.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Intellivision-Console-Set.jpg/640px-Intellivision-Console-Set.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Magnavox-Odyssey-Console-Set.jpg/640px-Magnavox-Odyssey-Console-Set.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Commodore-VIC-20-FL.jpg/640px-Commodore-VIC-20-FL.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Atari-800-Computer-FL.jpg/640px-Atari-800-Computer-FL.jpg'
 ];
-
-function wikiImageUrl(file) {
-  return 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(file) + '?width=640';
-}
 
 // Frilaegger et produktfoto paa hvid baggrund: flood-fill fra kanterne
 // goer baggrunden gennemsigtig (skygger bliver bloede, moerke sloer),
@@ -787,7 +785,7 @@ function makeRetroWall() {
           requestAnimationFrame(function () { cnv.classList.add('on'); });
         }
       };
-      img.src = wikiImageUrl(RETRO_HARDWARE[i]);
+      img.src = RETRO_HARDWARE[i];
     }
     wall.appendChild(cell);
   });
