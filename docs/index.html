@@ -631,33 +631,6 @@ var STEAM_CDN = 'https://cdn.cloudflare.steamstatic.com/steam/apps/';
 function steamHeroUrl(appid) { return STEAM_CDN + appid + '/library_hero.jpg'; }
 function steamCoverUrl(appid) { return STEAM_CDN + appid + '/library_600x900.jpg'; }
 
-// Commodore-brand-hero: chickenhead-logoet, regnbue-baandet og
-// ordmaerket paa moerk bund - samme stil som de oevrige SVG-heroes.
-var COMMODORE_HERO = SVG_OPEN +
-  '<defs>' +
-  '<linearGradient id="cb-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d1a20"/><stop offset="1" stop-color="#0d0c10"/></linearGradient>' +
-  '<radialGradient id="cb-glow"><stop offset="0" stop-color="#d8cfc0" stop-opacity="0.10"/><stop offset="1" stop-color="#d8cfc0" stop-opacity="0"/></radialGradient>' +
-  '</defs>' +
-  '<rect width="1920" height="1080" fill="url(#cb-bg)"/>' +
-  '<ellipse cx="480" cy="420" rx="620" ry="480" fill="url(#cb-glow)"/>' +
-  // Regnbue-baandet fra C64-badget, hele vejen over sceneriet
-  '<g transform="skewY(-2)" opacity="0.92">' +
-  '<rect x="0" y="660" width="1920" height="30" fill="#d2352b"/>' +
-  '<rect x="0" y="690" width="1920" height="30" fill="#e88a2e"/>' +
-  '<rect x="0" y="720" width="1920" height="30" fill="#e8c22e"/>' +
-  '<rect x="0" y="750" width="1920" height="30" fill="#4fa55c"/>' +
-  '<rect x="0" y="780" width="1920" height="30" fill="#3e67b1"/>' +
-  '</g>' +
-  // Chickenhead-logoet: C-ring med flag, stort og roligt til venstre
-  '<g opacity="0.9">' +
-  '<path d="M 583 118 A 300 300 0 1 0 583 682" fill="none" stroke="#d8cfc0" stroke-width="118"/>' +
-  '<polygon points="540,265 830,265 830,400 470,400" fill="#d2352b"/>' +
-  '<polygon points="470,400 830,400 830,535 540,535" fill="#f2efe8"/>' +
-  '</g>' +
-  // Ordmaerket, lavmaelt nederst til hoejre
-  '<text x="1840" y="1010" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="84" letter-spacing="3" fill="#d8cfc0" opacity="0.5">commodore</text>' +
-  '</svg>';
-
 var Ambient = (function () {
   var root = document.getElementById('ambient');
   var layers = [el('div', 'amb-layer'), el('div', 'amb-layer')];
@@ -1428,7 +1401,7 @@ var retroScreen = makeScreen('retro', function (screen, root) {
 
     function play(f, urls) {
       Ambient.show('retro:' + i, {
-        svg: COMMODORE_HERO,
+        svg: HEROES.retro,
         img: g.cover,
         imgArt: true,
         keepCinema: true,
@@ -1453,7 +1426,7 @@ var retroScreen = makeScreen('retro', function (screen, root) {
     if (candidates) {
       play(force, candidates);
     } else {
-      Ambient.show('retro:' + i, { svg: COMMODORE_HERO, img: g.cover, imgArt: true }, force);
+      Ambient.show('retro:' + i, { svg: HEROES.retro, img: g.cover, imgArt: true }, force);
     }
   }
 
