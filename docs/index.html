@@ -8,28 +8,24 @@
 </head>
 <body>
 <style>
-  /* KloppHits koncept-UI — Apple TV-inspireret fuldskaermsnavigation.
+  /* KloppHits koncept-UI — tvOS-inspireret fuldskaermsnavigation.
      Hver sektion fylder hele skaermen med et stemningsfuldt hero-baggrunds-
      billede der crossfader ved fokusskift. I den rigtige app er baggrundene
      dine egne billeder, videostills og Steam-covers.
-     Skandinavisk identitet: koelig grafit, nordisk isblaa accent, rene
-     stregikoner, luft og rolige overgange. Bevidst kun moerkt tema (TV).
+     Identitet: biograf-sort, frosted glas, hvid typografi - farverne
+     kommer fra indholdet. Fokus vises med loeft og lys, ikke ringe.
      1rem skalerer med skaermen, saa alt ser ens ud paa 1080p og 4K. */
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
-    --bg: #101216;
-    --bg-soft: #191c22;
-    --panel: #20242b;
-    --line: #2c313a;
-    --accent: #8fbfd1;
-    --accent-soft: #bcdde9;
-    --accent-glow: rgba(143, 191, 209, 0.42);
-    --text: #eef0f3;
-    --text-dim: #9aa3ae;
-    --radius: 1.1rem;
-    --focus-width: 0.26rem;
+    --bg: #050507;
+    --glass: rgba(255, 255, 255, 0.07);
+    --glass-strong: rgba(255, 255, 255, 0.12);
+    --line: rgba(255, 255, 255, 0.14);
+    --text: #f5f5f7;
+    --text-dim: rgba(235, 235, 245, 0.62);
+    --radius: 1.2rem;
     --safe-x: 5vw;
     --safe-y: 2.5vh;
     color-scheme: dark;
@@ -43,9 +39,9 @@
   html, body {
     height: 100%;
     overflow: hidden;
-    background: var(--bg);
+    background: radial-gradient(90vw 65vh at 50% -15%, #101014 0%, var(--bg) 60%);
     color: var(--text);
-    font-family: "Segoe UI", "Helvetica Neue", "Noto Sans", Ubuntu, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", "Helvetica Neue", sans-serif;
     user-select: none;
   }
 
@@ -79,11 +75,11 @@
   }
   #ambient .amb-vignette {
     position: absolute; inset: 0;
-    background: linear-gradient(rgba(16, 18, 22, 0.12) 0%, rgba(16, 18, 22, 0.34) 55%, var(--bg) 97%);
+    background: linear-gradient(rgba(5, 5, 7, 0.1) 0%, rgba(5, 5, 7, 0.35) 55%, var(--bg) 97%);
   }
   #ambient .amb-dim {
     position: absolute; inset: 0;
-    background: rgba(16, 18, 22, 0.62);
+    background: rgba(5, 5, 7, 0.64);
     opacity: 0;
     transition: opacity 0.45s ease;
   }
@@ -102,8 +98,8 @@
     padding: var(--safe-y) var(--safe-x) 0;
     flex: 0 0 auto;
   }
-  #logo { font-size: 1.9rem; font-weight: 700; letter-spacing: 0.05em; }
-  #logo span { color: var(--accent); }
+  #logo { font-size: 1.9rem; font-weight: 700; letter-spacing: 0.02em; }
+  #logo span { color: var(--text-dim); }
 
   /* ---- Skaerme ---- */
 
@@ -120,15 +116,15 @@
     to { opacity: 1; transform: none; }
   }
 
-  /* ---- Hjem: fuldskaerms hero + pille-navigation ---- */
+  /* ---- Hjem: fuldskaerms hero + tvOS-hylde ---- */
 
   #screen-home { justify-content: flex-end; gap: 2.6rem; padding-bottom: 2.4rem; }
 
   .hero { display: flex; flex-direction: column; gap: 0.9rem; }
   .hero .hero-title {
-    font-size: 6.4rem;
-    font-weight: 200;
-    letter-spacing: -0.015em;
+    font-size: 6.2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
     line-height: 1.02;
     text-wrap: balance;
   }
@@ -218,29 +214,28 @@
 
   /* ---- Sektionssider (indhold over hero-baggrunden) ---- */
 
-  .screen-title { font-size: 2.8rem; font-weight: 200; letter-spacing: -0.01em; margin: 0.6rem 0 0.2rem; text-wrap: balance; }
+  .screen-title { font-size: 2.8rem; font-weight: 700; letter-spacing: -0.015em; margin: 0.6rem 0 0.2rem; text-wrap: balance; }
   .screen-subtitle { font-size: 1.3rem; font-weight: 400; color: var(--text-dim); margin-bottom: 0.9rem; }
   .scroll-area { flex: 1 1 auto; overflow-y: auto; scrollbar-width: none; padding: 1.3rem 0.5rem 3rem; }
   .scroll-area::-webkit-scrollbar { display: none; }
 
   .grid { display: grid; gap: 2rem; }
 
+  /* Fliser i tvOS-stil: glas, loeft og lys - ingen fokusringe */
   .tile {
     position: relative;
     border-radius: var(--radius);
-    background: rgba(32, 36, 43, 0.66);
-    border: 1px solid rgba(44, 49, 58, 0.8);
-    backdrop-filter: blur(8px);
+    background: var(--glass);
+    backdrop-filter: blur(14px);
     overflow: hidden;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, outline-color 0.15s ease, border-color 0.15s ease;
-    outline: var(--focus-width) solid transparent;
-    outline-offset: -1px;
+    filter: brightness(0.85);
+    box-shadow: 0 0.4rem 1.2rem rgba(0, 0, 0, 0.4);
+    transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.3, 1), filter 0.25s ease, box-shadow 0.25s ease;
   }
   .tile.focused {
-    transform: scale(1.05);
-    outline-color: var(--accent);
-    border-color: transparent;
-    box-shadow: 0 0 0 var(--focus-width) var(--accent-glow), 0 1.2rem 3rem rgba(0, 0, 0, 0.55);
+    transform: scale(1.08);
+    filter: brightness(1.05);
+    box-shadow: 0 1.4rem 3rem rgba(0, 0, 0, 0.7), 0 0 0 0.14rem rgba(255, 255, 255, 0.35);
     z-index: 2;
   }
 
@@ -256,7 +251,7 @@
 
   #screen-videos { justify-content: flex-end; gap: 1.4rem; padding-bottom: 1.6rem; }
   .vhero { display: flex; flex-direction: column; gap: 0.4rem; }
-  .vhero .vhero-title { font-size: 3.8rem; font-weight: 200; letter-spacing: -0.01em; line-height: 1.05; }
+  .vhero .vhero-title { font-size: 3.8rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.05; }
   .vhero .vhero-meta { font-size: 1.3rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
   .vrail .tile.media-tile { flex: 0 0 auto; width: 15rem; }
   .tile .caption {
@@ -268,8 +263,9 @@
   }
   .tile .duration {
     position: absolute; top: 0.6rem; right: 0.6rem;
-    background: rgba(16, 18, 22, 0.85); border: 1px solid var(--line);
-    padding: 0.1rem 0.6rem; border-radius: 0.5rem;
+    background: rgba(5, 5, 7, 0.72);
+    backdrop-filter: blur(8px);
+    padding: 0.12rem 0.65rem; border-radius: 0.55rem;
     font-size: 0.95rem; font-weight: 700; font-variant-numeric: tabular-nums;
   }
 
@@ -284,7 +280,7 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 1rem; padding: 1.2rem; text-align: center;
   }
-  .tile.steam-tile .big-letter { font-size: 4rem; font-weight: 700; color: var(--accent); }
+  .tile.steam-tile .big-letter { font-size: 4rem; font-weight: 700; color: var(--text); }
   .tile.steam-tile .name { font-size: 1.25rem; font-weight: 600; color: var(--text-dim); }
 
   .tile .caption .cap-sub {
@@ -303,34 +299,17 @@
     align-items: center; justify-content: center;
     gap: 1rem; text-align: center; padding: 1.5rem;
   }
-  .tile.settings-tile .icon-wrap svg { width: 3.2rem; height: 3.2rem; color: var(--accent); }
+  .tile.settings-tile .icon-wrap svg { width: 3.2rem; height: 3.2rem; color: var(--text); }
   .tile.settings-tile .label { font-size: 1.45rem; font-weight: 650; }
   .tile.settings-tile .value { font-size: 1.1rem; color: var(--text-dim); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-  .rows { display: flex; flex-direction: column; gap: 1rem; max-width: 75rem; }
-  .row-item {
-    display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;
-    padding: 1.5rem 2rem;
-    border-radius: var(--radius);
-    background: rgba(32, 36, 43, 0.66); border: 1px solid rgba(44, 49, 58, 0.8);
-    backdrop-filter: blur(8px);
-    outline: var(--focus-width) solid transparent; outline-offset: -1px;
-    transition: transform 0.12s ease, outline-color 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
-  }
-  .row-item.focused {
-    transform: scale(1.012);
-    outline-color: var(--accent); border-color: transparent;
-    box-shadow: 0 0 0 var(--focus-width) var(--accent-glow);
-  }
-  .row-item .row-label { font-size: 1.5rem; font-weight: 650; display: flex; align-items: center; gap: 1rem; }
-  .row-item .row-label svg { width: 1.7rem; height: 1.7rem; color: var(--accent); }
-  .row-item .row-value { font-size: 1.25rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   /* ---- Toast ---- */
 
   #toast {
     position: fixed; top: calc(var(--safe-y) + 0.8rem); left: 50%; transform: translateX(-50%);
-    background: rgba(25, 28, 34, 0.96); border: 1px solid var(--accent);
+    background: rgba(20, 20, 24, 0.85);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--line);
     padding: 0.9rem 2.2rem; border-radius: 999px;
     font-size: 1.3rem; font-weight: 600; z-index: 60;
     transition: opacity 0.25s ease;
@@ -348,7 +327,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .tile, .row-item, .app-card, #ambient .amb-layer, #ambient .amb-dim { transition: none; animation: none; }
+    .tile, .app-card, #ambient .amb-layer, #ambient .amb-dim { transition: none; animation: none; }
     .screen.active, .hero.swap .hero-title, .hero.swap .hero-desc,
     .nav-item.focused .app-card, .nav-item.focused .app-card::after { animation: none; }
     .nav-item.focused .app-card { transform: scale(1.1); }
@@ -799,7 +778,7 @@ function makeScreen(id, build) {
 }
 
 // ============================================================================
-// Hjem: fuldskaerms hero + pille-navigation
+// Hjem: fuldskaerms hero + tvOS-hylde
 // ============================================================================
 
 var MENU = [
@@ -905,8 +884,8 @@ function makeSection(id, title, subtitle, cols, buildTiles, onFocusChange) {
     root.appendChild(el('p', 'screen-subtitle', subtitle));
     var area = el('div', 'scroll-area');
     root.appendChild(area);
-    var grid = el('div', cols === 1 ? 'rows' : 'grid');
-    if (cols > 1) grid.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+    var grid = el('div', 'grid');
+    grid.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
     area.appendChild(grid);
 
     var focus = new Grid(cols);
