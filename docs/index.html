@@ -68,23 +68,29 @@
   /* Load-sekvens: C64 boot-skaerm som start-ritual naar A trykkes */
   #c64load {
     position: fixed; inset: 0; z-index: 2;
-    background: #7869c4;
+    background: rgba(6, 6, 8, 0.85);
     display: flex; align-items: center; justify-content: center;
     opacity: 0;
     transition: opacity 0.35s ease;
   }
   #c64load.on { opacity: 1; }
-  #c64load .c64-screen {
-    width: 82%; height: 78%;
-    background: #40318d;
-    padding: 3.2rem 3.6rem;
-    box-shadow: inset 0 0 7rem rgba(0, 0, 0, 0.28);
+  #c64load .crt-tv { height: 64vh; }
+  .c64-boot {
+    position: absolute; inset: 0;
+    background: #7869c4;
+    padding: 2rem;
   }
-  #c64load::after {
+  .c64-boot::after {
     content: '';
     position: absolute; inset: 0;
     background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0 2px, transparent 2px 5px);
     pointer-events: none;
+  }
+  .c64-field {
+    width: 100%; height: 100%;
+    background: #40318d;
+    padding: 1.6rem 2rem;
+    overflow: hidden;
   }
   .c64-text {
     font-family: 'Courier New', 'Lucida Console', monospace;
@@ -127,25 +133,83 @@
   #ambient .amb-layer video.hero-video.on { opacity: 1; }
   /* Pixel-perfekt C64-rendering (testens vinder, tilstand 4):
      videoen tegnes paa canvas og opskaleres uden udjaevning */
-  /* C64-gameplay vises i et indrammet vindue frem for fuld skaerm -
-     lavoploeselige kilder bliver grynede, naar de blaeses helt op */
-  #ambient .amb-layer canvas.hero-canvas {
+  /* CRT-TV: haandtegnet fjernsynsramme om baade gameplay og load-skaerm.
+     Lavoploeselige kilder vises i moderat stoerrelse - ikke fuld skaerm */
+  .crt-tv {
+    display: flex;
+    align-items: stretch;
+    padding: 1.3rem;
+    background: linear-gradient(180deg, #2a2521 0%, #141110 100%);
+    border-radius: 1.4rem;
+    box-shadow: 0 3rem 7rem rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  .crt-screen {
+    position: relative;
+    height: 100%;
+    aspect-ratio: 4 / 3;
+    background: #000;
+    border-radius: 1.6rem;
+    overflow: hidden;
+    box-shadow: inset 0 0 3.5rem rgba(0, 0, 0, 0.85);
+  }
+  .crt-screen::after {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(120% 90% at 30% 12%, rgba(255, 255, 255, 0.07), transparent 45%);
+    pointer-events: none;
+    z-index: 3;
+  }
+  .crt-screen canvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
+  }
+  .crt-panel {
+    width: 5rem;
+    margin-left: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.8rem 0;
+  }
+  .crt-knob {
+    position: relative;
+    width: 2.7rem; height: 2.7rem;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #3c3630, #171411 70%);
+    box-shadow: inset 0 0.15rem 0.35rem rgba(255, 255, 255, 0.08), 0 0.25rem 0.5rem rgba(0, 0, 0, 0.6);
+  }
+  .crt-knob::after {
+    content: '';
+    position: absolute;
+    top: 12%; left: 50%;
+    width: 0.28rem; height: 34%;
+    transform: translateX(-50%);
+    background: #0b0907;
+    border-radius: 0.2rem;
+  }
+  .crt-knob-lille { width: 2rem; height: 2rem; }
+  .crt-grille {
+    flex: 1;
+    width: 3.4rem;
+    margin-top: 0.5rem;
+    border-radius: 0.4rem;
+    background: repeating-linear-gradient(0deg, #0d0b09 0 0.35rem, #201c18 0.35rem 0.75rem);
+  }
+  /* Gameplay-TV'et i ambient-laget */
+  #ambient .amb-layer .crt-tv {
     position: absolute;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    height: 62vh;
-    width: auto;
-    max-width: 78vw;
-    object-fit: contain;
-    image-rendering: pixelated;
-    background: #000;
-    border-radius: 0.7rem;
-    box-shadow: 0 0 0 0.7rem #15100c, 0 2.5rem 6rem rgba(0, 0, 0, 0.8);
+    height: 64vh;
     opacity: 0;
     transition: opacity 0.8s ease;
     z-index: 2;
   }
-  #ambient .amb-layer canvas.hero-canvas.on { opacity: 1; }
+  #ambient .amb-layer .crt-tv.on { opacity: 1; }
   #ambient .amb-layer video.pixel-src { opacity: 0 !important; }
   /* Steam-katalog: vaeg af spil-covers som paa Steams egen biblioteksside */
   .cover-wall {
@@ -640,6 +704,18 @@ var STEAM_CDN = 'https://cdn.cloudflare.steamstatic.com/steam/apps/';
 function steamHeroUrl(appid) { return STEAM_CDN + appid + '/library_hero.jpg'; }
 function steamCoverUrl(appid) { return STEAM_CDN + appid + '/library_600x900.jpg'; }
 
+function makeCrtTv() {
+  var tv = el('div', 'crt-tv');
+  var screenEl = el('div', 'crt-screen');
+  var panel = el('div', 'crt-panel');
+  panel.appendChild(el('div', 'crt-knob'));
+  panel.appendChild(el('div', 'crt-knob crt-knob-lille'));
+  panel.appendChild(el('div', 'crt-grille'));
+  tv.appendChild(screenEl);
+  tv.appendChild(panel);
+  return { tv: tv, screen: screenEl };
+}
+
 var Ambient = (function () {
   var root = document.getElementById('ambient');
   var layers = [el('div', 'amb-layer'), el('div', 'amb-layer')];
@@ -667,13 +743,13 @@ var Ambient = (function () {
     var lay = layers[active];
     var v = lay.querySelector('video');
     if (!v) return false;
-    var pc = lay.querySelector('canvas.hero-canvas');
+    var wrap = lay.querySelector('.crt-tv');
     document.body.classList.remove('cinema');
     v.classList.remove('on');
-    if (pc) pc.classList.remove('on');
+    if (wrap) wrap.classList.remove('on');
     setTimeout(function () {
       v.remove();
-      if (pc) pc.remove();
+      if (wrap) wrap.remove();
     }, 900);
     return true;
   }
@@ -727,27 +803,28 @@ var Ambient = (function () {
       v.setAttribute('playsinline', '');
 
       // Pixel-perfekt rendering: video skjules, tegnes paa canvas i stedet
-      var pc = null, pctx = null;
+      var pc = null, pctx = null, pcWrap = null;
       if (spec.pixelated) {
         v.classList.add('pixel-src');
         pc = document.createElement('canvas');
-        pc.className = 'hero-canvas';
         pctx = pc.getContext('2d');
+        pcWrap = makeCrtTv();
+        pcWrap.screen.appendChild(pc);
       }
 
       v.addEventListener('playing', function () {
         v.classList.add('on');
-        if (pc) pc.classList.add('on');
+        if (pcWrap) pcWrap.tv.classList.add('on');
         document.body.classList.add('cinema');
       });
       // Afspil een gang (eller til preview-loftet) og fald roligt tilbage
       function endPreview() {
         document.body.classList.remove('cinema');
         v.classList.remove('on');
-        if (pc) pc.classList.remove('on');
+        if (pcWrap) pcWrap.tv.classList.remove('on');
         setTimeout(function () {
           v.remove();
-          if (pc) pc.remove();
+          if (pcWrap) pcWrap.tv.remove();
         }, 900);
       }
       v.addEventListener('ended', endPreview);
@@ -772,13 +849,13 @@ var Ambient = (function () {
         }
         document.body.classList.remove('cinema');
         v.remove();
-        if (pc) pc.remove();
+        if (pcWrap) pcWrap.tv.remove();
         if (spec.onVideoFail) spec.onVideoFail();
       }); // stillbilledet bliver staaende
       setSrc();
       layer.appendChild(v);
-      if (pc) {
-        layer.appendChild(pc);
+      if (pcWrap) {
+        layer.appendChild(pcWrap.tv);
         (function loop() {
           if (!v.isConnected) return;
           if (v.videoWidth) {
@@ -833,17 +910,8 @@ var VIDEOS = [
 var INVADER_PATH = 'M5 4h2v2H5zM17 4h2v2h-2zM7 6h2v2H7zM15 6h2v2h-2zM5 8h14v2H5zM3 10h4v2H3zM9 10h6v2H9zM17 10h4v2h-4zM1 12h22v2H1zM1 14h2v2H1zM5 14h14v2H5zM21 14h2v2h-2zM1 16h2v2H1zM5 16h2v2H5zM17 16h2v2h-2zM21 16h2v2h-2zM7 18h4v2H7zM13 18h4v2h-4z';
 
 var RETRO_ART_HERO = SVG_OPEN +
-  '<defs><radialGradient id="ra-vig"><stop offset="0.55" stop-color="#241d18" stop-opacity="0"/><stop offset="1" stop-color="#120e0b" stop-opacity="0.85"/></radialGradient></defs>' +
-  '<rect width="1920" height="1080" fill="#241d18"/>' +
-  '<g transform="rotate(-20 960 540)" opacity="0.95">' +
-  '<rect x="-300" y="356" width="2600" height="56" fill="#d2352b"/>' +
-  '<rect x="-300" y="412" width="2600" height="56" fill="#e8722e"/>' +
-  '<rect x="-300" y="468" width="2600" height="56" fill="#e0c04a"/>' +
-  '<rect x="-300" y="524" width="2600" height="56" fill="#7fe07f"/>' +
-  '<rect x="-300" y="580" width="2600" height="56" fill="#6a8de0"/>' +
-  '</g>' +
-  '<g transform="translate(90,730) scale(10)" opacity="0.1"><path d="' + INVADER_PATH + '" fill="#e0c04a"/></g>' +
-  '<rect width="1920" height="1080" fill="url(#ra-vig)"/>' +
+  '<defs><radialGradient id="ra-g"><stop offset="0" stop-color="#211d22"/><stop offset="1" stop-color="#0a090b"/></radialGradient></defs>' +
+  '<rect width="1920" height="1080" fill="url(#ra-g)"/>' +
   '</svg>';
 
 var RETRO_WALL = [
@@ -1484,12 +1552,16 @@ var retroScreen = makeScreen('retro', function (screen, root) {
 
     var overlay = el('div');
     overlay.id = 'c64load';
-    var scr = el('div', 'c64-screen');
+    var crt = makeCrtTv();
+    var boot = el('div', 'c64-boot');
+    var field = el('div', 'c64-field');
     var pre = el('pre', 'c64-text', 'READY.\n');
     var cur = el('span', 'c64-cursor');
     pre.appendChild(cur);
-    scr.appendChild(pre);
-    overlay.appendChild(scr);
+    field.appendChild(pre);
+    boot.appendChild(field);
+    crt.screen.appendChild(boot);
+    overlay.appendChild(crt.tv);
     document.body.appendChild(overlay);
     requestAnimationFrame(function () { overlay.classList.add('on'); });
     document.body.classList.add('cinema');
