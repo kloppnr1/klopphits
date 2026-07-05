@@ -212,7 +212,7 @@
 
   .tile.media-tile { aspect-ratio: 16 / 10; }
   .tile.media-tile .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 3.6rem; }
-  .tile.media-tile video.thumb {
+  .tile.media-tile .thumb {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
     object-fit: cover;
@@ -675,27 +675,26 @@ var PHOTOS = [
   ['Ferie_Italien.jpg', scene(45, 15, '🍕')], ['IMG_2230.jpg', scene(180, 210, '⛵')]
 ].map(function (p) { return { name: p[0], scene: p[1] }; });
 
-// Sample-videoer fra Googles offentlige testvideo-bucket (gratis at bruge).
-// I den rigtige app er det dine egne klip fra videomappen.
-var VIDEO_CDN = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/';
+// Sample-videoer hostet sammen med siden (docs/media/) - ingen eksterne
+// afhaengigheder. I den rigtige app er det dine egne klip fra videomappen.
 var VIDEOS = [
-  ['Bålaften.mp4', 'ForBiggerBlazes.mp4', scene(24, 350, '🔥')],
-  ['Weekendtur.mp4', 'ForBiggerEscapes.mp4', scene(200, 230, '🏞️')],
-  ['Fødselsdag.mp4', 'ForBiggerFun.mp4', scene(330, 300, '🎂')],
-  ['Køretur.mp4', 'ForBiggerJoyrides.mp4', scene(205, 240, '🚗')],
-  ['Hyggeaften.mp4', 'ForBiggerMeltdowns.mp4', scene(260, 230, '🛋️')],
-  ['Grusvejen.mp4', 'SubaruOutbackOnStreetAndDirt.mp4', scene(95, 60, '🌲')],
-  ['Roadtrip.mp4', 'WeAreGoingOnBullrun.mp4', scene(35, 15, '🛣️')],
-  ['Den nye bil.mp4', 'VolkswagenGTIReview.mp4', scene(215, 250, '🚙')]
+  ['Bålaften.mp4', 'klip1', '0:12', scene(24, 350, '🔥')],
+  ['Weekendtur.mp4', 'klip2', '0:10', scene(200, 230, '🏞️')],
+  ['Fødselsdag.mp4', 'klip3', '0:11', scene(330, 300, '🎂')],
+  ['Køretur.mp4', 'klip4', '0:10', scene(205, 240, '🚗')],
+  ['Hyggeaften.mp4', 'klip5', '0:13', scene(260, 230, '🛋️')],
+  ['Grusvejen.mp4', 'klip6', '0:10', scene(95, 60, '🌲')],
+  ['Roadtrip.mp4', 'klip7', '0:12', scene(35, 15, '🛣️')],
+  ['Den nye bil.mp4', 'klip8', '0:09', scene(215, 250, '🚙')]
 ].map(function (v) {
-  return { name: v[0], url: VIDEO_CDN + v[1], scene: v[2], durText: '' };
+  return {
+    name: v[0],
+    url: 'media/' + v[1] + '.mp4',
+    poster: 'media/' + v[1] + '.jpg',
+    durText: v[2],
+    scene: v[3]
+  };
 });
-
-function formatTime(sec) {
-  sec = Math.max(0, Math.floor(sec || 0));
-  var m = Math.floor(sec / 60), s = sec % 60;
-  return m + ':' + String(s).padStart(2, '0');
-}
 
 var STEAM = [
   { name: 'Overcooked', appid: 448510 },
@@ -994,23 +993,14 @@ var videosScreen = makeScreen('videos', function (screen, root) {
     ph.style.background = item.scene.bg;
     tile.appendChild(ph);
 
-    var thumb = document.createElement('video');
-    thumb.className = 'thumb';
-    thumb.muted = true;
-    thumb.setAttribute('muted', '');
-    thumb.setAttribute('playsinline', '');
-    thumb.preload = 'metadata';
-    thumb.addEventListener('loadedmetadata', function () {
-      item.durText = formatTime(thumb.duration);
-      var badge = tile.querySelector('.duration');
-      if (badge) badge.textContent = item.durText;
-      if (focus.index === i) syncHero();
-    });
+    var thumb = el('img', 'thumb');
+    thumb.alt = '';
+    thumb.loading = 'lazy';
     thumb.addEventListener('error', function () { thumb.remove(); });
-    thumb.src = item.url + '#t=0.5';
+    thumb.src = item.poster;
     tile.appendChild(thumb);
 
-    tile.appendChild(el('div', 'duration', ''));
+    tile.appendChild(el('div', 'duration', item.durText));
     tile.appendChild(el('div', 'caption', item.name));
     rail.appendChild(tile);
     return tile;
