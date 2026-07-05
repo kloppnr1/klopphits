@@ -665,11 +665,24 @@ var Ambient = (function () {
           if (v.currentTime - startAt >= spec.videoMax) endPreview();
         });
       }
+      // Kandidat-kaede: proev naeste URL ved fejl (mediefiler kraever ingen CORS)
+      var srcs = Array.isArray(spec.video) ? spec.video.slice() : [spec.video];
+      var si = 0;
+      function setSrc() {
+        v.src = spec.videoStart ? srcs[si] + '#t=' + spec.videoStart : srcs[si];
+        if (v.play) v.play().catch(function () {});
+      }
       v.addEventListener('error', function () {
+        si++;
+        if (si < srcs.length) {
+          setSrc();
+          return;
+        }
         v.remove();
         if (pc) pc.remove();
+        if (spec.onVideoFail) spec.onVideoFail();
       }); // stillbilledet bliver staaende
-      v.src = spec.videoStart ? spec.video + '#t=' + spec.videoStart : spec.video;
+      setSrc();
       layer.appendChild(v);
       if (pc) {
         layer.appendChild(pc);
@@ -685,7 +698,6 @@ var Ambient = (function () {
           requestAnimationFrame(loop);
         })();
       }
-      if (v.play) v.play().catch(function () {});
     }
     layer.classList.add('visible');
     var hidden = layers[1 - active];
@@ -866,15 +878,35 @@ var LONGPLAY_BASE = 'https://archive.org/download/commodore64longplaysvarious/';
 // verificerede longplays fra MadMatty-samlingen.
 var LONGPLAYS = [
   { name: 'RoboCop', sub: 'Ocean, 1988', cover: c64CoverUrl(1309),
+    urls: [
+      'https://archive.org/download/Commodore-64-Oyun-Video/00057-Robocop%20(C64)(LongPlays).mp4',
+      'https://archive.org/download/Commodore-64-Oyun-Video/00057-RoboCop%20(C64)(LongPlays).mp4',
+      'https://archive.org/download/Commodore-64-Oyun-Video/00057%20-%20Robocop%20(C64)(LongPlays).mp4'
+    ],
     item: 'Commodore-64-Oyun-Video', match: /robocop/i,
     start: 180, scene: scene(210, 0, '🤖') },
   { name: 'Skate or Die', sub: 'Electronic Arts, 1987', cover: c64CoverUrl(1420),
+    urls: [
+      'https://archive.org/download/Commodore-64-Oyun-Video/00410-Skate%20Or%20Die%20(C64)(LongPlays).mp4',
+      'https://archive.org/download/Commodore-64-Oyun-Video/00410-Skate%20or%20Die%20(C64)(LongPlays).mp4',
+      'https://archive.org/download/Commodore-64-Oyun-Video/00410-Skate%20Or%20Die!%20(C64)(LongPlays).mp4'
+    ],
     item: 'Commodore-64-Oyun-Video', match: /skate/i,
     start: 150, scene: scene(280, 320, '🛹') },
   { name: '1942', sub: 'Elite, 1986', cover: c64CoverUrl(4),
+    urls: [
+      'https://archive.org/download/C64GVA302-1942/C64-Gamevideoarchive302-1942_512kb.mp4',
+      'https://archive.org/download/C64GVA302-1942/c64-gamevideoarchive302-1942_512kb.mp4',
+      'https://archive.org/download/C64GVA302-1942/C64GVA302-1942_512kb.mp4',
+      'https://archive.org/download/C64GVA302-1942/1942_512kb.mp4'
+    ],
     item: 'C64GVA302-1942', match: null,
     start: 120, scene: scene(210, 20, '✈️') },
   { name: 'Boulder Dash', sub: 'First Star, 1984', cover: c64CoverUrl(218),
+    urls: [
+      // Verificeret - virkede i forrige version
+      'https://archive.org/download/TheFirstC64LongplaySerie_3/C64-Longplay068-BoulderDash_512kb.mp4'
+    ],
     item: 'TheFirstC64LongplaySerie_3', match: /boulder/i,
     start: 120, scene: scene(35, 60, '💎') },
   { name: 'Commando', sub: 'Elite, 1985', file: 'Commodore_64_Longplay_Commando_EU.mp4', start: 95, scene: scene(20, 350, '🪖') },
@@ -1277,28 +1309,32 @@ var retroScreen = makeScreen('retro', function (screen, root) {
   function showPreview(force) {
     var i = focus.index;
     var g = LONGPLAYS[i];
+    var candidates = g.urls || (g.url ? [g.url] : null);
 
-    function play(f) {
+    function play(f, urls) {
       Ambient.show('retro:' + i, {
         svg: sceneSvg(g.scene, 'r' + i),
         img: g.cover,
-        video: g.url,
+        video: urls,
         videoStart: g.start,
         videoMax: 15,
-        pixelated: true // testens vinder: pixel-perfekt C64-rendering
+        pixelated: true, // testens vinder: pixel-perfekt C64-rendering
+        onVideoFail: function () {
+          // Alle kandidater fejlede: slaa filnavnet op som sidste udvej
+          if (g.resolved || !g.item) return;
+          g.resolved = true;
+          resolveArchiveMp4(g.item, g.match).then(function (url) {
+            if (url && focus.index === i && document.body.dataset.screen === 'retro') {
+              g.urls = [url];
+              play(true, g.urls);
+            }
+          });
+        }
       }, f);
     }
 
-    if (g.url) {
-      play(force);
-    } else if (g.item) {
-      // Vis coveret med det samme; slaa filnavnet op i archive.org-metadata
-      Ambient.show('retro:' + i, { svg: sceneSvg(g.scene, 'r' + i), img: g.cover }, force);
-      resolveArchiveMp4(g.item, g.match).then(function (url) {
-        if (!url) return;
-        g.url = url;
-        if (focus.index === i && document.body.dataset.screen === 'retro') play(true);
-      });
+    if (candidates) {
+      play(force, candidates);
     } else {
       Ambient.show('retro:' + i, { svg: sceneSvg(g.scene, 'r' + i), img: g.cover }, force);
     }
