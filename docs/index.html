@@ -464,9 +464,8 @@ var HEROES = {
     '<rect width="1920" height="770" fill="url(#vi-sky)"/>' +
     stars(101, 40, 500, '#cfe3f2') +
     '<circle cx="560" cy="290" r="230" fill="url(#vi-mglow)"/>' +
-    '<circle cx="560" cy="290" r="72" fill="#e8f2fa"/>' +
-    '<circle cx="537" cy="272" r="12" fill="#c9dcEA" opacity="0.5"/>' +
-    '<circle cx="585" cy="308" r="8" fill="#c9dcea" opacity="0.45"/>' +
+    '<circle cx="560" cy="290" r="80" fill="none" stroke="#e8f2fa" stroke-width="6" opacity="0.92"/>' +
+    '<path d="M540 256 L606 290 L540 324 Z" fill="#e8f2fa" opacity="0.95"/>' +
     '<ellipse cx="300" cy="470" rx="260" ry="34" fill="#23415c" opacity="0.55"/>' +
     '<ellipse cx="820" cy="520" rx="340" ry="30" fill="#1d3750" opacity="0.6"/>' +
     '<ellipse cx="1520" cy="430" rx="300" ry="36" fill="#23415c" opacity="0.5"/>' +
@@ -823,8 +822,10 @@ var homeScreen = makeScreen('home', function (screen, root) {
     // Hviler man paa Videoklip, starter en live-preview af foerste klip
     clearTimeout(homeVideoTimer);
     if (m.id === 'videos') {
+      // Preview afspiller een gang; naar den slutter, fader den tilbage
+      // til sektionens eget symbolbillede (play-emblemet over havet)
       homeVideoTimer = setTimeout(function () {
-        Ambient.show('videos-live', { svg: HEROES.videos, img: VIDEOS[0].poster, video: VIDEOS[0].url });
+        Ambient.show('videos-live', { svg: HEROES.videos, video: VIDEOS[0].url });
       }, 700);
     }
     if (animate) {
