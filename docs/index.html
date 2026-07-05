@@ -1139,8 +1139,11 @@ var LONGPLAYS = [
     item: 'commodore64longplaysoceanimagine', match: /robocop/i,
     start: 180, scene: scene(210, 0, '🤖') },
   { name: 'Skate or Die', sub: 'Electronic Arts, 1987', cover: c64CoverUrl(1420),
-    // Intet gaettet filnavn kendt - slaas op via metadata-API'et (resolveArchiveMp4)
-    item: 'Commodore-64-Oyun-Video', match: /skate/i,
+    urls: [
+      // Verificeret direkte link
+      'https://archive.org/download/commodore64longplaysvarious/Commodore_64_Longplay_-_Skate_or_Die_-_US.mp4'
+    ],
+    item: 'commodore64longplaysvarious', match: /skate/i,
     start: 150, scene: scene(280, 320, '🛹') }
 ].map(function (g) {
   if (g.file) g.url = LONGPLAY_BASE + g.file;
