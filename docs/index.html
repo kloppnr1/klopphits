@@ -283,7 +283,15 @@
   /* Biograf: mens en preview spiller, traeder alt UI tilbage */
   body.cinema #app { opacity: 0; }
 
-  .icon-wrap { display: inline-flex; flex: 0 0 auto; }
+  .icon-wrap {
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 auto;
+    width: 5.4rem; height: 5.4rem;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+    transition: background-color 0.25s ease, box-shadow 0.25s ease;
+  }
 
   /* ---- Topbar ---- */
 
@@ -351,8 +359,8 @@
     display: flex; flex-direction: column; align-items: center; gap: 0.85rem;
   }
 
-  /* Frosted glas-kort: laaner altid farven fra hero-baggrunden bagved,
-     saa navigation og baggrund pr. definition haenger sammen */
+  /* Morkt frosted glas-kort: baerer sin egen kontrast, saa det altid
+     staar tydeligt uanset hvor lys eller broget baggrunden er */
   .app-card {
     position: relative;
     width: 17rem;
@@ -360,15 +368,15 @@
     border-radius: 0.9rem;
     overflow: hidden;
     display: flex; align-items: center; justify-content: center;
-    background: rgba(255, 255, 255, 0.07);
-    backdrop-filter: blur(18px);
-    box-shadow: 0 0.4rem 1.2rem rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    background: rgba(14, 13, 16, 0.62);
+    backdrop-filter: blur(18px) saturate(1.1);
+    box-shadow: 0 0.6rem 1.8rem rgba(0, 0, 0, 0.55), inset 0 0 0 1.5px rgba(255, 255, 255, 0.16);
     transition: transform 0.28s cubic-bezier(0.2, 0.7, 0.3, 1), background-color 0.28s ease, box-shadow 0.28s ease;
   }
   .app-card .icon-wrap svg {
-    width: 3.6rem; height: 3.6rem;
+    width: 2.9rem; height: 2.9rem;
     color: var(--text);
-    opacity: 0.7;
+    opacity: 0.9;
     transition: opacity 0.25s ease;
   }
   /* tvOS-sheen: lysstrejf hen over det fokuserede kort */
@@ -382,12 +390,16 @@
     pointer-events: none;
   }
   .nav-item.focused .app-card {
-    background: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 1.8rem 3.5rem rgba(0, 0, 0, 0.65), inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+    background: rgba(28, 26, 30, 0.78);
+    box-shadow: 0 1.8rem 3.5rem rgba(0, 0, 0, 0.7), inset 0 0 0 1.5px rgba(255, 255, 255, 0.28);
     z-index: 3;
     animation: cardFloat 4.5s ease-in-out 0.3s infinite alternate;
   }
   .nav-item.focused .app-card .icon-wrap svg { opacity: 1; }
+  .nav-item.focused .app-card .icon-wrap {
+    background: rgba(255, 255, 255, 0.18);
+    box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.3);
+  }
   @keyframes cardFloat {
     from { transform: scale(1.12) translateY(-0.45rem); }
     to { transform: scale(1.12) translateY(-0.85rem); }
