@@ -69,6 +69,38 @@
     transition: opacity 0.8s ease;
   }
   #ambient .amb-layer video.hero-video.on { opacity: 1; }
+  /* Steam-katalog: vaeg af spil-covers som paa Steams egen biblioteksside */
+  .cover-wall {
+    position: absolute; inset: -7%;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1.3rem;
+    align-content: center;
+    padding: 2rem 3rem;
+    background: #08080b;
+    transform: rotate(-3deg);
+  }
+  .cover-wall .cw {
+    position: relative;
+    aspect-ratio: 2 / 3;
+    border-radius: 0.6rem;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0.8rem 2rem rgba(0, 0, 0, 0.5);
+  }
+  .cover-wall .cw span {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 3rem; font-weight: 700; color: rgba(255, 255, 255, 0.35);
+  }
+  .cover-wall .cw img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .cover-wall .cw img.on { opacity: 1; }
   @keyframes slowZoom {
     from { transform: scale(1); }
     to { transform: scale(1.07); }
@@ -525,8 +557,8 @@ var Ambient = (function () {
     }
   }
 
-  // spec: { svg: SVG-fallback, img: billed-URL (fx Steam hero),
-  //         video: video-URL til live-preview (muted loop) }
+  // spec: { svg: SVG-fallback, node: DOM-element (fx cover-katalog),
+  //         img: billed-URL, video: video-URL til live-preview }
   function show(key, spec) {
     if (key === currentKey || !spec) return;
     currentKey = key;
@@ -534,6 +566,7 @@ var Ambient = (function () {
     var layer = layers[active];
     stopVideo(layer);
     layer.innerHTML = spec.svg || '';
+    if (spec.node) layer.appendChild(spec.node);
     if (spec.img) {
       var im = new Image();
       im.className = 'hero-img';
@@ -599,6 +632,24 @@ var VIDEOS = [
     scene: v[3]
   };
 });
+
+// Katalog-vaeg af covers, som paa Steams egen biblioteksside.
+// Bygges frisk pr. visning (elementet lever inde i et ambient-lag).
+function makeCoverWall() {
+  var wall = el('div', 'cover-wall');
+  STEAM.forEach(function (game) {
+    var cell = el('div', 'cw');
+    cell.appendChild(el('span', null, game.name.charAt(0)));
+    var img = el('img');
+    img.alt = '';
+    img.addEventListener('load', function () { img.classList.add('on'); });
+    img.addEventListener('error', function () { img.remove(); });
+    img.src = steamCoverUrl(game.appid);
+    cell.appendChild(img);
+    wall.appendChild(cell);
+  });
+  return wall;
+}
 
 var STEAM = [
   { name: 'Overcooked', appid: 448510 },
@@ -731,7 +782,7 @@ function makeScreen(id, build) {
 
 var MENU = [
   { id: 'videos', icon: 'videos', label: 'Videoklip', desc: 'Familiens videoklip, klar til afspilning.' },
-  { id: 'steam', icon: 'steam', label: 'Steam', desc: 'Dine installerede spil — fremhævet: Overcooked.' },
+  { id: 'steam', icon: 'steam', label: 'Steam', desc: 'Hele dit spilbibliotek, klar til start.' },
   { id: 'retro', icon: 'retro', label: 'Retro spil', desc: 'Online klassikere fra arkaden og konsollen.' }
 ];
 
@@ -767,7 +818,7 @@ var homeScreen = makeScreen('home', function (screen, root) {
     heroDesc.textContent = m.desc;
     Ambient.show(m.id, {
       svg: HEROES[m.id],
-      img: m.id === 'steam' ? steamHeroUrl(STEAM[0].appid) : undefined
+      node: m.id === 'steam' ? makeCoverWall() : undefined
     });
     // Hviler man paa Videoklip, starter en live-preview af foerste klip
     clearTimeout(homeVideoTimer);
