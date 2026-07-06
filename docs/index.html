@@ -907,6 +907,9 @@ var HEROES = {
     '</g>' +
     '</svg>'
 };
+// C64-kortet genbruger synthwave-heroen som rolig grundbaggrund; den
+// levende vaeg (makeC64Wall) laegges ovenpaa
+HEROES.c64 = HEROES.retro;
 
 // Live artwork fra Steams offentlige CDN (falder tilbage til SVG-scenen
 // hvis billedet ikke kan hentes, fx offline eller blokeret netvaerk).
@@ -1385,6 +1388,52 @@ function makeVideoWall() {
   return wall;
 }
 
+// C64: titler der spiller levende longplay-video paa C64-vaeggen (resten
+// vises som statisk box art). Praecis som brugeren bad om: kun 1942 og
+// Skate or Die er levende
+var C64_LIVE = { '1942': 1, 'Skate or Die': 1 };
+
+function c64VideoSrc(g) {
+  var src = g.urls ? g.urls[0] : g.url;
+  if (!src) return null;
+  return g.start ? src + '#t=' + g.start : src;
+}
+
+// Vaeg til hjemmeskaermens C64-kort i videoklip-stil (landskabs-celler):
+// 1942 + Skate or Die spiller levende longplay-video, resten er box art
+function makeC64Wall() {
+  var wall = el('div', 'cover-wall video-wall c64-wall');
+  LONGPLAYS.forEach(function (g) {
+    var cell = el('div', 'cw');
+    var src = C64_LIVE[g.name] ? c64VideoSrc(g) : null;
+    if (src) {
+      var vid = document.createElement('video');
+      vid.muted = true;
+      vid.loop = true;
+      vid.autoplay = true;
+      vid.playsInline = true;
+      vid.setAttribute('muted', '');
+      vid.setAttribute('autoplay', '');
+      vid.setAttribute('loop', '');
+      vid.setAttribute('playsinline', '');
+      vid.addEventListener('playing', function () { vid.classList.add('on'); });
+      vid.addEventListener('error', function () { vid.remove(); });
+      vid.src = src;
+      if (vid.play) vid.play().catch(function () {});
+      cell.appendChild(vid);
+    } else if (g.cover) {
+      var img = el('img');
+      img.alt = '';
+      img.addEventListener('load', function () { img.classList.add('on'); });
+      img.addEventListener('error', function () { img.remove(); });
+      img.src = g.cover;
+      cell.appendChild(img);
+    }
+    wall.appendChild(cell);
+  });
+  return wall;
+}
+
 function makeRetroWall() {
   var wall = el('div', 'cover-wall retro-wall');
   RETRO_WALL.forEach(function (g, i) {
@@ -1619,7 +1668,8 @@ function makeScreen(id, build) {
 var MENU = [
   { id: 'videos', icon: 'videos', label: 'Videoklip', desc: 'Familiens videoklip, klar til afspilning.' },
   { id: 'steam', icon: 'steam', label: 'Steam', desc: 'Hele dit spilbibliotek, klar til start.' },
-  { id: 'retro', icon: 'retro', label: 'Retro spil', desc: 'C64-klassikere - vælg et cover og gameplayet starter med det samme.' }
+  { id: 'retro', icon: 'retro', label: 'Retro spil', desc: 'C64-klassikere - vælg et cover og gameplayet starter med det samme.' },
+  { id: 'c64', icon: 'retro', label: 'C64', desc: 'Levende C64-væg i videoklip-stil - longplays og box art side om side.' }
 ];
 
 var homeScreen = makeScreen('home', function (screen, root) {
@@ -1653,7 +1703,7 @@ var homeScreen = makeScreen('home', function (screen, root) {
     // Hjemmeskaermen er rolig: kun statiske heroes - previews koerer i sektionerne
     Ambient.show(m.id, {
       svg: HEROES[m.id],
-      node: m.id === 'steam' ? makeCoverWall() : (m.id === 'retro' ? makeRetroWall() : (m.id === 'videos' ? makeVideoWall() : undefined))
+      node: m.id === 'steam' ? makeCoverWall() : (m.id === 'retro' ? makeRetroWall() : (m.id === 'videos' ? makeVideoWall() : (m.id === 'c64' ? makeC64Wall() : undefined)))
     });
     if (animate) {
       hero.classList.remove('swap');
@@ -1667,6 +1717,7 @@ var homeScreen = makeScreen('home', function (screen, root) {
     if (target === 'videos') Screens.push(videosScreen);
     else if (target === 'steam') Screens.push(steamScreen);
     else if (target === 'retro') Screens.push(retroScreen);
+    else if (target === 'c64') Screens.push(c64Screen);
   }
 
   cards.forEach(function (card) {
@@ -1962,6 +2013,62 @@ var retroPlayScreen = makeScreen('retro-play', function (screen, root) {
     }
   };
 });
+
+// C64: alternativ retro-praesentation i videoklip-stil. Landskabs-fliser
+// (16:10, samme stoerrelsesfornemmelse som Videoklip) i stedet for 2:3
+// portraet-covers. 1942 + Skate or Die spiller levende longplay-video,
+// resten viser box art. Vaelges en flise, aabnes samme afspilningsside
+// som Retro spil.
+var c64Screen = makeSection('c64', 'C64',
+  LONGPLAYS.length + ' klassikere · levende longplays og box art',
+  4,
+  function (grid) {
+    return LONGPLAYS.map(function (g) {
+      var tile = el('div', 'tile media-tile c64-tile');
+      var ph = el('div', 'ph', g.scene.emoji);
+      ph.style.background = g.scene.bg;
+      tile.appendChild(ph);
+
+      var src = C64_LIVE[g.name] ? c64VideoSrc(g) : null;
+      if (src) {
+        var vid = document.createElement('video');
+        vid.className = 'thumb';
+        vid.muted = true;
+        vid.loop = true;
+        vid.autoplay = true;
+        vid.playsInline = true;
+        vid.setAttribute('muted', '');
+        vid.setAttribute('autoplay', '');
+        vid.setAttribute('loop', '');
+        vid.setAttribute('playsinline', '');
+        vid.addEventListener('error', function () { vid.remove(); });
+        vid.src = src;
+        if (vid.play) vid.play().catch(function () {});
+        tile.appendChild(vid);
+      } else if (g.cover) {
+        var art = el('img', 'thumb');
+        art.alt = '';
+        art.loading = 'lazy';
+        art.addEventListener('error', function () { art.remove(); });
+        art.src = g.cover;
+        tile.appendChild(art);
+      }
+
+      var cap = el('div', 'caption', g.name);
+      cap.appendChild(el('span', 'cap-sub', g.sub));
+      tile.appendChild(cap);
+      grid.appendChild(tile);
+      return tile;
+    });
+  },
+  function () {
+    // Statisk regnbue-baggrund bag gitteret (skifter ikke med fokus)
+    Ambient.show('c64-grid', { svg: RETRO_ART_HERO });
+  },
+  function (i) {
+    Screens.push(retroPlayScreen, i);
+  }
+);
 
 // ============================================================================
 // Input: Gamepad API + tastatur
