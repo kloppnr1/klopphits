@@ -8,7 +8,8 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "start:windowed": "electron . --windowed"
+    "start:windowed": "electron . --windowed",
+    "serve": "node scripts/serve-docs.js"
   },
   "devDependencies": {
     "electron": "^31.3.0"

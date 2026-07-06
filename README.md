@@ -20,6 +20,21 @@ Konceptet for stil og primær navigation ligger som statisk side i `docs/` og de
 
 Navigér med controller eller tastatur (piletaster, Enter = A, Esc = B).
 
+### Kør koncept-UI'et lokalt (rigtige videoer og covers)
+
+For at teste med de rigtige longplay-videoer (archive.org), C64-covers
+(coverbrowser) og Steam-artwork — uden placeholders — kør den lille
+indbyggede statiske server på din egen PC:
+
+```bash
+npm run serve
+```
+
+Åbn derefter **http://localhost:8080/** i en browser (Chrome/Edge anbefales
+for controller-understøttelse). Serveren har fuld range-support, så
+videoer streamer og kan spole korrekt. Kræver kun Node.js (ingen ekstra
+pakker). Sæt en anden port med `PORT=3000 npm run serve`.
+
 ## Kom i gang
 
 Kræver [Node.js](https://nodejs.org/) 18+.
