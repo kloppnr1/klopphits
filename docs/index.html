@@ -392,6 +392,8 @@
   }
   .cover-wall.retro-wall { background: #0a0612; }
   .cover-wall.video-wall { background: #05070a; }
+  /* C64-vaeggen har gennemsigtig bund, saa regnbue-heroen skinner igennem */
+  .cover-wall.c64-wall { background: transparent; }
   .cover-wall.video-wall .cw { aspect-ratio: 16 / 10; }
   .cover-wall .cw video {
     position: absolute; inset: 0;
@@ -401,6 +403,27 @@
     transition: opacity 0.5s ease;
   }
   .cover-wall .cw video.on { opacity: 1; }
+  /* Blur-fill-cover: portraet-box art i landskabs-fliser. HELE coveret
+     staar centreret (contain) ovenpaa en sloeret, formoerket kopi, der
+     fylder flisen - intet beskaeres, men flisen er fuldt udfyldt.
+     Bruges baade i C64-vaeggen (.cw) og i C64-gitteret (.media-tile) */
+  .cw .cover-fill-bg, .cw .cover-fill-fg,
+  .media-tile .cover-fill-bg, .media-tile .cover-fill-fg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+  }
+  .cw .cover-fill-bg, .media-tile .cover-fill-bg {
+    object-fit: cover;
+    transform: scale(1.2);
+    filter: blur(1.6rem) brightness(0.5) saturate(1.15);
+  }
+  .cw .cover-fill-fg, .media-tile .cover-fill-fg {
+    object-fit: contain;
+    opacity: 0;
+    transition: opacity 0.45s ease;
+    filter: drop-shadow(0 0.5rem 1.4rem rgba(0, 0, 0, 0.55));
+  }
+  .cw .cover-fill-fg.on, .media-tile .cover-fill-fg.on { opacity: 1; }
   @keyframes slowZoom {
     from { transform: scale(1); }
     to { transform: scale(1.07); }
@@ -907,9 +930,8 @@ var HEROES = {
     '</g>' +
     '</svg>'
 };
-// C64-kortet genbruger synthwave-heroen som rolig grundbaggrund; den
-// levende vaeg (makeC64Wall) laegges ovenpaa
-HEROES.c64 = HEROES.retro;
+// C64-kortets grundbaggrund saettes til regnbue-heroen laengere nede
+// (RETRO_ART_HERO defineres foerst senere - se assignment efter den)
 
 // Live artwork fra Steams offentlige CDN (falder tilbage til SVG-scenen
 // hvis billedet ikke kan hentes, fx offline eller blokeret netvaerk).
@@ -1290,6 +1312,9 @@ var RETRO_ART_HERO = SVG_OPEN +
   '</g>' +
   '</svg>';
 
+// C64-kortets forside bruger ogsaa regnbue-baggrunden (bag den levende vaeg)
+HEROES.c64 = RETRO_ART_HERO;
+
 var RETRO_WALL = [
   { t: 'STAR RAID', sys: 'ARCADE', style: 'marquee', c: '#ff4dd2' },
   { t: 'PIXEL KART', sys: 'ATARI 2600', style: 'atari', c: '#e8722e' },
@@ -1393,10 +1418,68 @@ function makeVideoWall() {
 // Skate or Die er levende
 var C64_LIVE = { '1942': 1, 'Skate or Die': 1 };
 
-function c64VideoSrc(g) {
-  var src = g.urls ? g.urls[0] : g.url;
-  if (!src) return null;
-  return g.start ? src + '#t=' + g.start : src;
+// Levende thumbnail-video med FULD kilde-robusthed: proev hver kandidat-URL,
+// og slaa til sidst det rigtige filnavn op via archive.org-metadata (praecis
+// som afspilningssiden). Uden dette spiller fx 1942 ikke, fordi dens foerste
+// gaettede URL giver 404. Holder sig i gameplay-vinduet fra g.start.
+function makeTileVideo(g) {
+  var vid = document.createElement('video');
+  vid.className = 'thumb';
+  vid.muted = true;
+  vid.loop = true;
+  vid.playsInline = true;
+  vid.setAttribute('muted', '');
+  vid.setAttribute('loop', '');
+  vid.setAttribute('playsinline', '');
+  vid.addEventListener('playing', function () { vid.classList.add('on'); });
+
+  var srcs = (g.urls || (g.url ? [g.url] : [])).slice();
+  var si = 0, triedResolve = false;
+  function setSrc() {
+    vid.src = g.start ? srcs[si] + '#t=' + g.start : srcs[si];
+    if (vid.play) vid.play().catch(function () {});
+  }
+  vid.addEventListener('error', function () {
+    si++;
+    if (si < srcs.length) { setSrc(); return; }
+    if (!triedResolve && g.item) {
+      triedResolve = true;
+      resolveArchiveMp4(g.item, g.match).then(function (url) {
+        if (!url) return;
+        g.urls = [url]; g.resolved = true; // afspilningssiden faar glaede af det med det samme
+        srcs = [url]; si = 0; setSrc();
+      });
+    }
+  });
+  // Bliv i gameplay-vinduet: hop tilbage til g.start efter et stykke tid,
+  // saa loopet ikke falder tilbage til longplayens rolige begyndelse
+  if (g.start) {
+    vid.addEventListener('timeupdate', function () {
+      if (vid.currentTime - g.start >= 30) vid.currentTime = g.start;
+    });
+  }
+  if (srcs.length) setSrc();
+  return vid;
+}
+
+// Blur-fill-cover: portraet-box art passer daarligt i landskabs-fliser.
+// Loesningen (Apple TV/YouTube-stil): HELE coveret vises centreret ovenpaa
+// en sloeret, formoerket kopi af sig selv, der fylder flisen - saa intet
+// beskaeres OG flisen fyldes helt ud
+function appendCoverFill(parent, coverUrl) {
+  var bg = el('img', 'cover-fill-bg');
+  bg.alt = '';
+  bg.loading = 'lazy';
+  bg.addEventListener('error', function () { bg.remove(); });
+  bg.src = coverUrl;
+  var fg = el('img', 'cover-fill-fg');
+  fg.alt = '';
+  fg.loading = 'lazy';
+  fg.addEventListener('load', function () { fg.classList.add('on'); });
+  fg.addEventListener('error', function () { fg.remove(); });
+  fg.src = coverUrl;
+  parent.appendChild(bg);
+  parent.appendChild(fg);
 }
 
 // Vaeg til hjemmeskaermens C64-kort i videoklip-stil (landskabs-celler):
@@ -1405,29 +1488,10 @@ function makeC64Wall() {
   var wall = el('div', 'cover-wall video-wall c64-wall');
   LONGPLAYS.forEach(function (g) {
     var cell = el('div', 'cw');
-    var src = C64_LIVE[g.name] ? c64VideoSrc(g) : null;
-    if (src) {
-      var vid = document.createElement('video');
-      vid.muted = true;
-      vid.loop = true;
-      vid.autoplay = true;
-      vid.playsInline = true;
-      vid.setAttribute('muted', '');
-      vid.setAttribute('autoplay', '');
-      vid.setAttribute('loop', '');
-      vid.setAttribute('playsinline', '');
-      vid.addEventListener('playing', function () { vid.classList.add('on'); });
-      vid.addEventListener('error', function () { vid.remove(); });
-      vid.src = src;
-      if (vid.play) vid.play().catch(function () {});
-      cell.appendChild(vid);
+    if (C64_LIVE[g.name] && (g.urls || g.url)) {
+      cell.appendChild(makeTileVideo(g));
     } else if (g.cover) {
-      var img = el('img');
-      img.alt = '';
-      img.addEventListener('load', function () { img.classList.add('on'); });
-      img.addEventListener('error', function () { img.remove(); });
-      img.src = g.cover;
-      cell.appendChild(img);
+      appendCoverFill(cell, g.cover);
     }
     wall.appendChild(cell);
   });
@@ -1547,7 +1611,7 @@ var LONGPLAYS = [
       'https://archive.org/download/commodore64longplaysvarious/Commodore_64_Longplay_-_Skate_or_Die_-_US.mp4'
     ],
     item: 'commodore64longplaysvarious', match: /skate/i,
-    start: 150, scene: scene(280, 320, '🛹') }
+    start: 245, scene: scene(280, 320, '🛹') }
 ].map(function (g) {
   if (g.file) g.url = LONGPLAY_BASE + g.file;
   return g;
@@ -2029,29 +2093,10 @@ var c64Screen = makeSection('c64', 'C64',
       ph.style.background = g.scene.bg;
       tile.appendChild(ph);
 
-      var src = C64_LIVE[g.name] ? c64VideoSrc(g) : null;
-      if (src) {
-        var vid = document.createElement('video');
-        vid.className = 'thumb';
-        vid.muted = true;
-        vid.loop = true;
-        vid.autoplay = true;
-        vid.playsInline = true;
-        vid.setAttribute('muted', '');
-        vid.setAttribute('autoplay', '');
-        vid.setAttribute('loop', '');
-        vid.setAttribute('playsinline', '');
-        vid.addEventListener('error', function () { vid.remove(); });
-        vid.src = src;
-        if (vid.play) vid.play().catch(function () {});
-        tile.appendChild(vid);
+      if (C64_LIVE[g.name] && (g.urls || g.url)) {
+        tile.appendChild(makeTileVideo(g));
       } else if (g.cover) {
-        var art = el('img', 'thumb');
-        art.alt = '';
-        art.loading = 'lazy';
-        art.addEventListener('error', function () { art.remove(); });
-        art.src = g.cover;
-        tile.appendChild(art);
+        appendCoverFill(tile, g.cover);
       }
 
       var cap = el('div', 'caption', g.name);
